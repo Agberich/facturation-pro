@@ -6,11 +6,11 @@ spring:
     name: facturation-backend
 
   # Configuration de la base de données PostgreSQL
-  datasource:
-    url: jdbc:postgresql://localhost:5432/facturation_db?currentSchema=app_facturation,public
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:} # <-- surcharge via la variable d'environnement DB_PASSWORD en dehors de ta machine locale
-    driver-class-name: org.postgresql.Driver
+ datasource:
+  url: ${DATABASE_URL}
+  username: ${DB_USERNAME}
+  password: ${DB_PASSWORD}
+  driver-class-name: org.postgresql.Driver
 
   # Configuration JPA / Hibernate
   jpa:
@@ -32,5 +32,5 @@ spring:
     # Authentification (JWT)
 app:
   jwt:
-    secret: WyVJRd-fJzL4P9cu2ypEcq6GNph7heohVlVnN4gnClF-41zRhBmnII-KVmI6ED_o
+    secret: ${JWT_SECRET}
     expiration-heures: 12
