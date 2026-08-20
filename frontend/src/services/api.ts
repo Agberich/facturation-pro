@@ -2,8 +2,7 @@ import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu, ConnexionReponse } from '../types/facturation';
 // Le backend Spring Boot n'expose pas de préfixe de version : tous les
 // controllers sont sous /api (voir @RequestMapping des controllers Java).
-const API_BASE_URL = 'http://localhost:8080/api';
-
+const API_BASE_URL = 'https://facturation-pro-c14q.onrender.com/api';
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
