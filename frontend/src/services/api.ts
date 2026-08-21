@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu, ConnexionReponse } from '../types/facturation';
+
 // Le backend Spring Boot n'expose pas de préfixe de version : tous les
 // controllers sont sous /api (voir @RequestMapping des controllers Java).
 const API_BASE_URL = 'https://facturation-pro-c14q.onrender.com/api';
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -95,7 +97,54 @@ export const ParametreServiceAPI = {
   },
 };
 
+/** Service d'exportation sécurisé avec injection automatique du Token JWT */
 export const ExportServiceAPI = {
+  telechargerPdf: async (idFacturation: string, numeroFacture?: string): Promise<void> => {
+    const response = await api.get(`/export/factures/${idFacturation}/pdf`, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `facture-${numeroFacture || idFacturation}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  telechargerExcel: async (idFacturation: string, numeroFacture?: string): Promise<void> => {
+    const response = await api.get(`/export/factures/${idFacturation}/excel`, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `facture-${numeroFacture || idFacturation}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  telechargerCsv: async (idFacturation: string, numeroFacture?: string): Promise<void> => {
+    const response = await api.get(`/export/factures/${idFacturation}/csv`, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `facture-${numeroFacture || idFacturation}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  // Rétrocompatibilité au cas où un composant réclame les anciens liens
   urlPdf: (idFacturation: string) => `${API_BASE_URL}/export/factures/${idFacturation}/pdf`,
   urlExcel: (idFacturation: string) => `${API_BASE_URL}/export/factures/${idFacturation}/excel`,
   urlCsv: (idFacturation: string) => `${API_BASE_URL}/export/factures/${idFacturation}/csv`,
@@ -120,6 +169,7 @@ export const ImportServiceAPI = {
     return response.data;
   },
 };
+
 export const AuthServiceAPI = {
   connexion: async (email: string, motDePasse: string): Promise<ConnexionReponse> => {
     const response = await api.post('/auth/login', { email, motDePasse });
@@ -135,4 +185,5 @@ export const definirJeton = (token: string | null) => {
     delete api.defaults.headers.common['Authorization'];
   }
 };
+
 export default api;
