@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { UtilisateurRequest, UtilisateurResponse } from '../types/utilisateur';
 
-const API_URL = 'http://localhost:8080/api/utilisateurs';
+// Remplacement de localhost par l'URL Render en ligne
+const API_URL = 'https://facturation-pro-c14q.onrender.com/api/utilisateurs';
 
 // Configuration de l'intercepteur pour ajouter le token JWT à chaque requête
 const getAuthHeaders = () => {
