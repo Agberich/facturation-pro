@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu, ConnexionReponse } from '../types/facturation';
 
-// Le backend Spring Boot n'expose pas de préfixe de version : tous les
-// controllers sont sous /api (voir @RequestMapping des controllers Java).
-const API_BASE_URL = 'https://facturation-pro-c14q.onrender.com/api';
+// Utilise la variable d'environnement VITE_API_URL si disponible, sinon bascule sur localhost en développement
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -144,7 +143,7 @@ export const ExportServiceAPI = {
     window.URL.revokeObjectURL(url);
   },
 
-  // Rétrocompatibilité au cas où un composant réclame les anciens liens
+  // Rétrocompatibilité basée sur l'URL courante
   urlPdf: (idFacturation: string) => `${API_BASE_URL}/export/factures/${idFacturation}/pdf`,
   urlExcel: (idFacturation: string) => `${API_BASE_URL}/export/factures/${idFacturation}/excel`,
   urlCsv: (idFacturation: string) => `${API_BASE_URL}/export/factures/${idFacturation}/csv`,
