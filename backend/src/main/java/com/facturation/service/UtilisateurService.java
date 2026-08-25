@@ -97,12 +97,22 @@ public class UtilisateurService {
     }
 
     @Transactional
-    public void reactiver(UUID id) {
-        Utilisateur utilisateur = utilisateurRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé avec l'ID : " + id));
-        utilisateur.setActif(true);
-        utilisateurRepository.save(utilisateur);
+   public void reactiver(UUID id) {
+
+    Utilisateur utilisateur = utilisateurRepository.findById(id)
+            .orElseThrow(() ->
+                    new EntityNotFoundException(
+                            "Utilisateur non trouvé avec l'ID : " + id));
+
+    if (utilisateur.getDeletedAt() != null) {
+        throw new IllegalStateException(
+                "Impossible de réactiver un utilisateur supprimé");
     }
+
+    utilisateur.setActif(true);
+
+    utilisateurRepository.save(utilisateur);
+}
 
     @Transactional
     public void supprimer(UUID id) {

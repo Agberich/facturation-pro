@@ -17,11 +17,14 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
 
     List<Utilisateur> findByEntrepriseIdEntrepriseAndActifFalseOrderByNomAsc(UUID idEntreprise);
 
-    Optional<Utilisateur> findByEmail(String email);
+    // MODIFICATION
+    Optional<Utilisateur> findByEmailAndDeletedAtIsNull(String email);
 
     boolean existsByEmail(String email);
 
     boolean existsByEmailAndIdUtilisateurNot(String email, UUID idUtilisateur);
+
     List<Utilisateur> findByEntrepriseIdEntrepriseAndDeletedAtIsNullOrderByNomAsc(
-        UUID idEntreprise);
+        UUID idEntreprise
+    );
 }

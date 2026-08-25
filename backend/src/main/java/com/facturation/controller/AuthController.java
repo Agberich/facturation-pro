@@ -26,20 +26,45 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequestDTO request) {
-        Utilisateur utilisateur = utilisateurRepository.findByEmail(request.getEmail())
-                .orElse(null);
 
-        if (utilisateur == null || !passwordEncoder.matches(request.getMotDePasse(), utilisateur.getMotDePasseHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Identifiants incorrects");
+        Utilisateur utilisateur = utilisateurRepository
+        .findByEmailAndDeletedAtIsNull(request.getEmail())
+        .orElse(null);;
+
+        if (utilisateur == null ||
+                !passwordEncoder.matches(
+                        request.getMotDePasse(),
+                        utilisateur.getMotDePasseHash())) {
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Identifiants incorrects");
         }
 
-        String roleStr = utilisateur.getRole() != null ? utilisateur.getRole().name() : null;
+        // BLOQUE LES COMPTES DÉSACTIVÉS OU SUPPRIMÉS
+        if (!Boolean.TRUE.equals(utilisateur.getActif())
+                || utilisateur.getDeletedAt() != null) {
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Compte désactivé");
+        }
+
+        String roleStr = utilisateur.getRole() != null
+                ? utilisateur.getRole().name()
+                : null;
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", roleStr);
-        claims.put("idEntreprise", utilisateur.getEntreprise() != null ? utilisateur.getEntreprise().getIdEntreprise() : null);
+        claims.put(
+                "idEntreprise",
+                utilisateur.getEntreprise() != null
+                        ? utilisateur.getEntreprise().getIdEntreprise()
+                        : null
+        );
 
-        String token = jwtService.generateToken(utilisateur.getEmail(), claims);
+        String token = jwtService.generateToken(
+                utilisateur.getEmail(),
+                claims
+        );
 
         LoginResponseDTO response = LoginResponseDTO.builder()
                 .token(token)
@@ -47,7 +72,11 @@ public class AuthController {
                 .nom(utilisateur.getNom())
                 .email(utilisateur.getEmail())
                 .role(roleStr)
-                .idEntreprise(utilisateur.getEntreprise() != null ? utilisateur.getEntreprise().getIdEntreprise() : null)
+                .idEntreprise(
+                        utilisateur.getEntreprise() != null
+                                ? utilisateur.getEntreprise().getIdEntreprise()
+                                : null
+                )
                 .build();
 
         return ResponseEntity.ok(response);
