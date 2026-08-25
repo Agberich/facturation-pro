@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu, ConnexionReponse } from '../types/facturation';
 
-// Utilise la variable d'environnement VITE_API_URL si disponible, sinon bascule sur localhost en développement
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// URL directe de ton backend sur Render (évite de cibler localhost en production)
+const API_BASE_URL = 'https://facturation-pro-c14q.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
