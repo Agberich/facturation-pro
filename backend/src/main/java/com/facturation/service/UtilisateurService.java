@@ -54,6 +54,7 @@ public class UtilisateurService {
                 .motDePasseHash(passwordEncoder.encode(request.getMotDePasse()))
                 .role(request.getRole() != null ? request.getRole() : Utilisateur.RoleUtilisateur.COMPTABLE)
                 .actif(request.getActif() != null ? request.getActif() : true)
+                .doitChangerMotDePasse(true) // Force le changement de mot de passe à la création
                 .entreprise(entreprise)
                 .build();
 
@@ -75,6 +76,7 @@ public class UtilisateurService {
 
         if (request.getMotDePasse() != null && !request.getMotDePasse().isBlank()) {
             utilisateur.setMotDePasseHash(passwordEncoder.encode(request.getMotDePasse()));
+            utilisateur.setDoitChangerMotDePasse(true); // Redemande un changement si le mot de passe est réinitialisé
         }
 
         if (request.getRole() != null) {
@@ -145,16 +147,19 @@ public class UtilisateurService {
         }
     }
 
-    private UtilisateurResponse mapToResponse(Utilisateur utilisateur) {
-        return UtilisateurResponse.builder()
-                .idUtilisateur(utilisateur.getIdUtilisateur())
-                .nom(utilisateur.getNom())
-                .email(utilisateur.getEmail())
-                .role(utilisateur.getRole())
-                .actif(utilisateur.getActif())
-                .idEntreprise(utilisateur.getEntreprise() != null ? utilisateur.getEntreprise().getIdEntreprise() : null)
-                .derniereConnexion(utilisateur.getDerniereConnexion())
-                .createdAt(utilisateur.getCreatedAt())
-                .build();
-    }
+   private UtilisateurResponse mapToResponse(Utilisateur utilisateur) {
+    return UtilisateurResponse.builder()
+            .idUtilisateur(utilisateur.getIdUtilisateur())
+            .nom(utilisateur.getNom())
+            .prenom(utilisateur.getPrenom())
+            .telephone(utilisateur.getTelephone())
+            .email(utilisateur.getEmail())
+            .role(utilisateur.getRole())
+            .actif(utilisateur.getActif())
+            .doitChangerMotDePasse(utilisateur.getDoitChangerMotDePasse())
+            .idEntreprise(utilisateur.getEntreprise() != null ? utilisateur.getEntreprise().getIdEntreprise() : null)
+            .derniereConnexion(utilisateur.getDerniereConnexion())
+            .createdAt(utilisateur.getCreatedAt())
+            .build();
+}
 }
