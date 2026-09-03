@@ -17,6 +17,10 @@ public class UtilisateurRequest {
     @NotBlank(message = "Le nom est obligatoire")
     private String nom;
 
+    private String prenom;
+
+    private String telephone;
+
     @Email(message = "Format d'email invalide")
     @NotBlank(message = "L'email est obligatoire")
     private String email;

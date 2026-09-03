@@ -1,5 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Users, Upload, Settings2, Menu, X, LogOut, UserCog } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  Users, 
+  Upload, 
+  Settings2, 
+  Menu, 
+  X, 
+  LogOut, 
+  UserCog, 
+  RefreshCw, 
+  ServerOff 
+} from 'lucide-react';
+
 import { Dashboard } from './components/Dashboard';
 import { ListeFacturations } from './components/ListeFacturations';
 import { DetailFacturation } from './components/DetailFacturation';
@@ -8,8 +21,10 @@ import { ImportClients } from './components/ImportClients';
 import { ParametresEntreprise } from './components/ParametresEntreprise';
 import { GestionUtilisateurs } from './pages/GestionUtilisateurs';
 import { Login } from './components/Login';
-import { definirContexte, definirJeton } from './services/api';
-import { ConnexionReponse } from './types/facturation';
+import { PremierAdmin } from './pages/PremierAdmin';
+import { ChangerMotDePasse } from './pages/ChangerMotDePasse';
+
+import { AuthServiceAPI, LoginResponse } from './services/authService';
 
 type Page = 'dashboard' | 'facturations' | 'clients' | 'import' | 'utilisateurs' | 'parametres';
 
@@ -24,54 +39,82 @@ const nav = [
 
 const CLE_STOCKAGE = 'facturation_auth';
 
-const initiales = (nom: string) =>
-  nom.split(' ').filter(Boolean).map((m) => m[0]).slice(0, 2).join('').toUpperCase();
+const initiales = (nom?: string) =>
+  nom ? nom.split(' ').filter(Boolean).map((m) => m[0]).slice(0, 2).join('').toUpperCase() : 'U';
 
 export const App: React.FC = () => {
-  const [auth, setAuth] = useState<ConnexionReponse | null>(null);
-  const [chargementInitial, setChargementInitial] = useState(true);
+  const [auth, setAuth] = useState<LoginResponse | null>(null);
+  const [etatServeur, setEtatServeur] = useState<'loading' | 'ok' | 'erreur'>('loading');
+  const [premierAdminExiste, setPremierAdminExiste] = useState<boolean>(true);
+  const [afficherChangerMotDePasse, setAfficherChangerMotDePasse] = useState<boolean>(false);
+
   const [page, setPage] = useState<Page>('dashboard');
   const [selected, setSelected] = useState<string | null>(null);
   const [mobile, setMobile] = useState(false);
 
-  // Au chargement de la page, on tente de restaurer une session existante
-  // (jeton sauvegardé localement) avant d'afficher l'écran de connexion.
   useEffect(() => {
-    const brut = localStorage.getItem(CLE_STOCKAGE);
-    if (brut) {
+    const sessionBrute = localStorage.getItem(CLE_STOCKAGE);
+    
+    if (sessionBrute) {
       try {
-        const reponse: ConnexionReponse = JSON.parse(brut);
-        definirJeton(reponse.token);
-        definirContexte(reponse.idEntreprise, reponse.idUtilisateur);
-        setAuth(reponse);
+        const reponseSession: LoginResponse = JSON.parse(sessionBrute);
+        setAuth(reponseSession);
+        if (reponseSession.doitChangerMotDePasse || reponseSession.utilisateur?.doitChangerMotDePasse) {
+          setAfficherChangerMotDePasse(true);
+        }
+        setEtatServeur('ok');
       } catch {
         localStorage.removeItem(CLE_STOCKAGE);
+        verifierServeur();
       }
+    } else {
+      verifierServeur();
     }
-    setChargementInitial(false);
   }, []);
 
-  const handleConnexionReussie = (reponse: ConnexionReponse) => {
-    localStorage.setItem(CLE_STOCKAGE, JSON.stringify(reponse));
-    definirJeton(reponse.token);
-    definirContexte(reponse.idEntreprise, reponse.idUtilisateur);
-    setAuth(reponse);
+  const verifierServeur = () => {
+    AuthServiceAPI.verifierPremierAdminExiste()
+      .then((existe: boolean) => {
+        setPremierAdminExiste(existe);
+        setEtatServeur('ok');
+      })
+      .catch(() => {
+        setEtatServeur('erreur');
+      });
   };
 
- const handleDeconnexion = () => {
-  // Suppression des identifiants et tokens de session
-  localStorage.removeItem(CLE_STOCKAGE);
-  
-  // Nettoyage des filtres de période enregistrés pour repartir à zéro[cite: 2]
-  localStorage.removeItem('facturation_annee');
-  localStorage.removeItem('facturation_mois');
+  const handleConnexionReussie = (response: LoginResponse) => {
+    const utilisateurSession = response.utilisateur || {
+      id: response.idUtilisateur || '',
+      nom: response.nom || '',
+      email: '',
+      role: '',
+    };
 
-  // Réinitialisation des états de l'application
-  definirJeton(null);
-  setAuth(null);
-  setPage('dashboard');
-  setSelected(null);
-};
+    const objetAuth: LoginResponse = {
+      token: response.token,
+      idEntreprise: response.idEntreprise,
+      idUtilisateur: response.idUtilisateur || utilisateurSession.id,
+      nom: response.nom || utilisateurSession.nom,
+      utilisateur: utilisateurSession,
+      doitChangerMotDePasse: response.doitChangerMotDePasse ?? utilisateurSession.doitChangerMotDePasse
+    };
+
+    localStorage.setItem(CLE_STOCKAGE, JSON.stringify(objetAuth));
+    setAuth(objetAuth);
+
+    if (objetAuth.doitChangerMotDePasse) {
+      setAfficherChangerMotDePasse(true);
+    }
+  };
+
+  const handleDeconnexion = () => {
+    localStorage.removeItem(CLE_STOCKAGE);
+    setAuth(null);
+    setAfficherChangerMotDePasse(false);
+    setPage('dashboard');
+    setSelected(null);
+  };
 
   const go = (p: Page) => {
     setPage(p);
@@ -79,16 +122,71 @@ export const App: React.FC = () => {
     setMobile(false);
   };
 
-  if (chargementInitial) {
-    return null; // Évite un flash de l'écran de connexion pendant la restauration de session
+  // 1. Écran de chargement initial
+  if (etatServeur === 'loading') {
+    return (
+      <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
+          <RefreshCw size={32} className="spin-icon" style={{ marginBottom: 16 }} />
+          <h3>Connexion au serveur backend…</h3>
+          <p style={{ color: '#666', fontSize: '0.9rem', marginTop: 8 }}>
+            Démarrage des services en cours, veuillez patienter.
+          </p>
+        </div>
+      </div>
+    );
   }
 
+  // 2. Écran d'erreur Réseau
+  if (etatServeur === 'erreur' && !auth) {
+    return (
+      <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
+          <ServerOff size={40} color="#dc2626" style={{ marginBottom: 16 }} />
+          <h2>Serveur indisponible</h2>
+          <p style={{ color: '#666', margin: '12px 0 24px 0' }}>
+            Impossible de contacter l'API. Si le service Render était en veille, la relance peut prendre environ 1 minute.
+          </p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            Réessayer la connexion
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Écrans d'Authentification / Initialisation
   if (!auth) {
-    return <Login onConnexionReussie={handleConnexionReussie} />;
+    if (!premierAdminExiste) {
+      return <PremierAdmin onSuccess={handleConnexionReussie} />;
+    }
+    return <Login onSuccess={handleConnexionReussie} />;
   }
 
+  // 3.5 Écran de changement de mot de passe obligatoire
+  if (afficherChangerMotDePasse || auth.doitChangerMotDePasse) {
+    return (
+      <ChangerMotDePasse
+        onSuccess={() => {
+          const authAjour: LoginResponse = {
+            ...auth,
+            doitChangerMotDePasse: false,
+            utilisateur: auth.utilisateur
+              ? { ...auth.utilisateur, doitChangerMotDePasse: false }
+              : undefined,
+          };
+          localStorage.setItem(CLE_STOCKAGE, JSON.stringify(authAjour));
+          setAuth(authAjour);
+          setAfficherChangerMotDePasse(false);
+        }}
+      />
+    );
+  }
+
+  // 4. Interface Principale
   const active = nav.find((n) => n.id === page);
   const idEntreprise = auth.idEntreprise;
+  const nomUtilisateur = auth.nom || auth.utilisateur?.nom || 'Utilisateur';
 
   return (
     <div className="app-shell">
@@ -119,7 +217,7 @@ export const App: React.FC = () => {
         </nav>
 
         <div className="sidebar-footer">
-          Entreprise démo
+          Espace Entreprise
           <br />
           <span>Gestion de facturation</span>
         </div>
@@ -139,8 +237,8 @@ export const App: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div className="user-chip">
-              <div className="avatar">{initiales(auth.nom)}</div>
-              <span>{auth.nom}</span>
+              <div className="avatar">{initiales(nomUtilisateur)}</div>
+              <span>{nomUtilisateur}</span>
             </div>
             <button
               className="btn"

@@ -17,9 +17,12 @@ public class UtilisateurResponse {
 
     private UUID idUtilisateur;
     private String nom;
+    private String prenom;
+    private String telephone;
     private String email;
     private Utilisateur.RoleUtilisateur role;
     private Boolean actif;
+    private Boolean doitChangerMotDePasse;
     private UUID idEntreprise;
     private OffsetDateTime derniereConnexion;
     private OffsetDateTime createdAt;

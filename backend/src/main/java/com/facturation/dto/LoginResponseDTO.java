@@ -18,4 +18,5 @@ public class LoginResponseDTO {
     private String email;
     private String role;
     private UUID idEntreprise;
+    private Boolean doitChangerMotDePasse;
 }
