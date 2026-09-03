@@ -17,7 +17,6 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
 
     List<Utilisateur> findByEntrepriseIdEntrepriseAndActifFalseOrderByNomAsc(UUID idEntreprise);
 
-    // MODIFICATION
     Optional<Utilisateur> findByEmailAndDeletedAtIsNull(String email);
 
     boolean existsByEmail(String email);
@@ -26,5 +25,12 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
 
     List<Utilisateur> findByEntrepriseIdEntrepriseAndDeletedAtIsNullOrderByNomAsc(
         UUID idEntreprise
+    );
+
+    // Comptage des administrateurs actifs et non supprimés dans une entreprise hors l'utilisateur ciblé
+    long countByEntrepriseIdEntrepriseAndRoleAndActifTrueAndDeletedAtIsNullAndIdUtilisateurNot(
+        UUID idEntreprise,
+        Utilisateur.RoleUtilisateur role,
+        UUID idUtilisateur
     );
 }

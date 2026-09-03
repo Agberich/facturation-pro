@@ -26,7 +26,8 @@ public class UtilisateurService {
 
     @Transactional(readOnly = true)
     public List<UtilisateurResponse> listerParEntreprise(UUID idEntreprise) {
-        return utilisateurRepository.findByEntrepriseIdEntrepriseAndDeletedAtIsNullOrderByNomAsc(idEntreprise)                .stream()
+        return utilisateurRepository.findByEntrepriseIdEntrepriseAndDeletedAtIsNullOrderByNomAsc(idEntreprise)
+                .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -92,35 +93,56 @@ public class UtilisateurService {
     public void desactiver(UUID id) {
         Utilisateur utilisateur = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé avec l'ID : " + id));
+
+        verifierDernierAdministrateur(utilisateur);
+
         utilisateur.setActif(false);
         utilisateurRepository.save(utilisateur);
     }
 
     @Transactional
-   public void reactiver(UUID id) {
+    public void reactiver(UUID id) {
+        Utilisateur utilisateur = utilisateurRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé avec l'ID : " + id));
 
-    Utilisateur utilisateur = utilisateurRepository.findById(id)
-            .orElseThrow(() ->
-                    new EntityNotFoundException(
-                            "Utilisateur non trouvé avec l'ID : " + id));
+        if (utilisateur.getDeletedAt() != null) {
+            throw new IllegalStateException("Impossible de réactiver un utilisateur supprimé");
+        }
 
-    if (utilisateur.getDeletedAt() != null) {
-        throw new IllegalStateException(
-                "Impossible de réactiver un utilisateur supprimé");
+        utilisateur.setActif(true);
+        utilisateurRepository.save(utilisateur);
     }
-
-    utilisateur.setActif(true);
-
-    utilisateurRepository.save(utilisateur);
-}
 
     @Transactional
     public void supprimer(UUID id) {
         Utilisateur utilisateur = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé avec l'ID : " + id));
+
+        verifierDernierAdministrateur(utilisateur);
+
         utilisateur.setDeletedAt(OffsetDateTime.now());
         utilisateur.setActif(false);
         utilisateurRepository.save(utilisateur);
+    }
+
+    private void verifierDernierAdministrateur(Utilisateur utilisateur) {
+        if (Utilisateur.RoleUtilisateur.ADMIN.equals(utilisateur.getRole())) {
+            
+            UUID idEntreprise = utilisateur.getEntreprise() != null ? utilisateur.getEntreprise().getIdEntreprise() : null;
+
+            if (idEntreprise != null) {
+                long nbAdminsRestants = utilisateurRepository
+                        .countByEntrepriseIdEntrepriseAndRoleAndActifTrueAndDeletedAtIsNullAndIdUtilisateurNot(
+                                idEntreprise,
+                                Utilisateur.RoleUtilisateur.ADMIN,
+                                utilisateur.getIdUtilisateur()
+                        );
+
+                if (nbAdminsRestants == 0) {
+                    throw new IllegalStateException("Impossible de désactiver ou supprimer le dernier administrateur de l'entreprise.");
+                }
+            }
+        }
     }
 
     private UtilisateurResponse mapToResponse(Utilisateur utilisateur) {
