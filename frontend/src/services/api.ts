@@ -43,6 +43,15 @@ export const ClientServiceAPI = {
   reactiverClient: async (idClient: string): Promise<void> => {
     await api.put(`/clients/${idClient}/reactiver`);
   },
+
+  // --- ACTIONS EN MASSE (BULK) ---
+  desactiverClientsEnMasse: async (idsClients: string[]): Promise<void> => {
+    await api.put('/clients/desactiver', idsClients);
+  },
+
+  reactiverClientsEnMasse: async (idsClients: string[]): Promise<void> => {
+    await api.put('/clients/reactiver', idsClients);
+  },
 };
 
 export const FacturationServiceAPI = {

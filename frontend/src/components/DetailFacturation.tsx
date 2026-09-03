@@ -29,6 +29,12 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
       ]);
       setF(a);
       setLines(b);
+
+      // Synchronisation du mois et de l'année courante consultés
+      if (a) {
+        localStorage.setItem('facturation_annee', a.annee.toString());
+        localStorage.setItem('facturation_mois', a.mois.toString());
+      }
     } catch {
       setError('Impossible de charger cette facturation.');
     } finally {

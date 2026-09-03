@@ -58,13 +58,20 @@ export const App: React.FC = () => {
     setAuth(reponse);
   };
 
-  const handleDeconnexion = () => {
-    localStorage.removeItem(CLE_STOCKAGE);
-    definirJeton(null);
-    setAuth(null);
-    setPage('dashboard');
-    setSelected(null);
-  };
+ const handleDeconnexion = () => {
+  // Suppression des identifiants et tokens de session
+  localStorage.removeItem(CLE_STOCKAGE);
+  
+  // Nettoyage des filtres de période enregistrés pour repartir à zéro[cite: 2]
+  localStorage.removeItem('facturation_annee');
+  localStorage.removeItem('facturation_mois');
+
+  // Réinitialisation des états de l'application
+  definirJeton(null);
+  setAuth(null);
+  setPage('dashboard');
+  setSelected(null);
+};
 
   const go = (p: Page) => {
     setPage(p);

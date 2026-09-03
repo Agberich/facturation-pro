@@ -30,12 +30,9 @@ public class ClientService {
         }
         
         if (includeInactive) {
-            // Renvoie les actifs (actif=true) ET les inactifs/archivés (actif=false) 
-            // tant que deletedAt est NULL
             return clientRepository.findByEntrepriseIdEntrepriseAndDeletedAtIsNull(idEntreprise);
         }
         
-        // Renvoie uniquement les clients actifs (actif=true et deletedAt IS NULL)
         return clientRepository.findByEntrepriseIdEntrepriseAndActifTrueAndDeletedAtIsNull(idEntreprise);
     }
 
@@ -93,24 +90,15 @@ public class ClientService {
         return clientRepository.save(clientExistant);
     }
 
-    /**
-     * ARCHIVAGE / DESACTIVATION
-     * On passe simplement 'actif' à false.
-     * On garde 'deletedAt' à NULL pour qu'il puisse réapparaître quand on coche "Afficher les archivés".
-     */
     @Transactional
     public void desactiverClient(UUID idClient) {
         Client client = obtenirClientParId(idClient);
         client.setActif(false);
-        client.setDeletedAt(null); // <-- CORRECTION : reste NULL !
+        client.setDeletedAt(null);
         clientRepository.save(client);
         log.info("Client désactivé (archivé) : ID {}", idClient);
     }
 
-    /**
-     * REACTIVATION
-     * On repasse 'actif' à true.
-     */
     @Transactional
     public void reactiverClient(UUID idClient) {
         Client client = obtenirClientParId(idClient);
@@ -120,16 +108,38 @@ public class ClientService {
         log.info("Client réactivé : ID {}", idClient);
     }
 
-    /**
-     * SUPPRESSION DEFINITIVE (Soft Delete) - Optionnel
-     * Si un jour tu veux VRAIMENT supprimer un client de la vue utilisateur.
-     */
+    // --- LOGIQUE MASSE (BULK) ---
+
     @Transactional
-    public void supprimerClientDefinitivement(UUID idClient) {
+    public void desactiverClientsEnMasse(List<UUID> idsClients) {
+        if (idsClients == null || idsClients.isEmpty()) return;
+        List<Client> clients = clientRepository.findAllById(idsClients);
+        clients.forEach(client -> {
+            client.setActif(false);
+            client.setDeletedAt(null);
+        });
+        clientRepository.saveAll(clients);
+        log.info("{} clients désactivés en masse", clients.size());
+    }
+
+    @Transactional
+    public void reactiverClientsEnMasse(List<UUID> idsClients) {
+        if (idsClients == null || idsClients.isEmpty()) return;
+        List<Client> clients = clientRepository.findAllById(idsClients);
+        clients.forEach(client -> {
+            client.setActif(true);
+            client.setDeletedAt(null);
+        });
+        clientRepository.saveAll(clients);
+        log.info("{} clients réactivés en masse", clients.size());
+    }
+
+    @Transactional
+    public void archiverClientDefinitivement(UUID idClient) {
         Client client = obtenirClientParId(idClient);
         client.setActif(false);
-        client.setDeletedAt(OffsetDateTime.now()); // Ici 'deletedAt' sert à la suppression réelle
+        client.setDeletedAt(OffsetDateTime.now());
         clientRepository.save(client);
-        log.info("Client supprimé définitivement : ID {}", idClient);
+        log.info("Client archivé définitivement (Soft Delete) : ID {}", idClient);
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FacturationServiceAPI } from '../services/api';
 import { StatutFacturation } from '../types/facturation';
 
@@ -6,9 +6,19 @@ interface Props {
   idEntreprise: string;
 }
 
+const getInitialAnnee = () => {
+  const saved = localStorage.getItem('facturation_annee');
+  return saved ? parseInt(saved, 10) : new Date().getFullYear();
+};
+
+const getInitialMois = () => {
+  const saved = localStorage.getItem('facturation_mois');
+  return saved ? parseInt(saved, 10) : new Date().getMonth() + 1;
+};
+
 export const TableauFacturation: React.FC<Props> = ({ idEntreprise }) => {
-  const [annee, setAnnee] = useState<number>(new Date().getFullYear());
-  const [mois, setMois] = useState<number>(new Date().getMonth() + 1);
+  const [annee, setAnnee] = useState<number>(getInitialAnnee);
+  const [mois, setMois] = useState<number>(getInitialMois);
   const [statut, setStatut] = useState<StatutFacturation | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
@@ -17,6 +27,11 @@ export const TableauFacturation: React.FC<Props> = ({ idEntreprise }) => {
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
+
+  useEffect(() => {
+    localStorage.setItem('facturation_annee', annee.toString());
+    localStorage.setItem('facturation_mois', mois.toString());
+  }, [annee, mois]);
 
   const handleInitialiserMois = async () => {
     setLoading(true);
@@ -36,7 +51,6 @@ export const TableauFacturation: React.FC<Props> = ({ idEntreprise }) => {
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h2>📋 Facturation Mensuelle</h2>
 
-      {/* Barre de sélection de la période */}
       <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '20px' }}>
         <label>
           <strong>Mois :</strong>
@@ -72,7 +86,6 @@ export const TableauFacturation: React.FC<Props> = ({ idEntreprise }) => {
         </div>
       )}
 
-      {/* Aperçu des Statuts */}
       {statut && (
         <div style={{ marginBottom: '15px' }}>
           <span>Statut du mois : </span>

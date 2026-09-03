@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, UserRound, Save, Pencil, Power } from 'lucide-react';
+import { Plus, Search, UserRound, Save, Pencil, Power, CheckSquare, XSquare } from 'lucide-react';
 import { ClientServiceAPI } from '../services/api';
 import { Client } from '../types/facturation';
 
@@ -29,10 +29,14 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
+  // État pour la sélection multiple (Priorité 2)
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+
   const load = async () => {
     setLoading(true);
     try {
       setClients(await ClientServiceAPI.getListeClients(idEntreprise, showInactive));
+      setSelectedClients([]); // Réinitialise la sélection lors du rechargement
       setError('');
     } catch {
       setError('Impossible de charger les clients.');
@@ -49,6 +53,44 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
     () => clients.filter(c => `${c.nom} ${c.prenom}`.toLowerCase().includes(search.toLowerCase())),
     [clients, search]
   );
+
+  // --- GESTION DE LA SÉLECTION MULTIPLE ---
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = filtered.map(c => c.idClient).filter((id): id is string => !!id);
+      setSelectedClients(allIds);
+    } else {
+      setSelectedClients([]);
+    }
+  };
+
+  const handleSelectOne = (idClient?: string) => {
+    if (!idClient) return;
+    setSelectedClients(prev =>
+      prev.includes(idClient) ? prev.filter(id => id !== idClient) : [...prev, idClient]
+    );
+  };
+
+  // --- ACTIONS EN MASSE ---
+  const handleBulkAction = async (action: 'desactiver' | 'reactiver') => {
+    if (selectedClients.length === 0) return;
+
+    const label = action === 'desactiver' ? 'désactiver' : 'réactiver';
+    if (!window.confirm(`Voulez-vous vraiment ${label} les ${selectedClients.length} client(s) sélectionné(s) ?`)) {
+      return;
+    }
+
+    try {
+      if (action === 'desactiver') {
+        await ClientServiceAPI.desactiverClientsEnMasse(selectedClients);
+      } else {
+        await ClientServiceAPI.reactiverClientsEnMasse(selectedClients);
+      }
+      await load();
+    } catch {
+      setError(`Impossible de ${label} les clients sélectionnés.`);
+    }
+  };
 
   const handleOpenNew = () => {
     setEditingId(null);
@@ -73,8 +115,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       ? 'Voulez-vous vraiment désactiver ce client ?'
       : 'Voulez-vous réactiver ce client ?';
 
-    const confirme = window.confirm(messageConfirmation);
-    if (!confirme) return;
+    if (!window.confirm(messageConfirmation)) return;
 
     try {
       if (client.actif) {
@@ -91,13 +132,11 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validation des champs obligatoires
     if (!form.nom.trim() || !form.prenom.trim()) {
       setError('Le nom et le prénom sont obligatoires.');
       return;
     }
 
-    // 2. Validation de la chronologie des dates
     if (form.dateEntree && form.dateSortie && form.dateSortie < form.dateEntree) {
       setError('La date de sortie doit être postérieure ou égale à la date d’entrée.');
       return;
@@ -105,7 +144,6 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
 
     setSaving(true);
 
-    // 3. Transformation des chaînes vides en undefined pour le backend Java
     const payload: Client = {
       ...form,
       dateNaissance: form.dateNaissance?.trim() || undefined,
@@ -129,6 +167,8 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
     }
   };
 
+  const isAllSelected = filtered.length > 0 && selectedClients.length === filtered.length;
+
   return (
     <>
       <div className="page-head">
@@ -144,6 +184,21 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       </div>
 
       {error && <div className="notice notice-error">{error}</div>}
+
+      {/* BARRE D'ACTIONS GROUPÉES */}
+      {selectedClients.length > 0 && (
+        <div className="notice" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#edf2f7', borderColor: '#cbd5e0' }}>
+          <span><strong>{selectedClients.length}</strong> client(s) sélectionné(s)</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn btn-secondary" onClick={() => handleBulkAction('desactiver')} style={{ color: '#e53e3e' }}>
+              <XSquare size={15} /> Désactiver la sélection
+            </button>
+            <button className="btn btn-secondary" onClick={() => handleBulkAction('reactiver')} style={{ color: '#38a169' }}>
+              <CheckSquare size={15} /> Réactiver la sélection
+            </button>
+          </div>
+        </div>
+      )}
 
       {open && (
         <form className="card form-card" onSubmit={save}>
@@ -238,6 +293,13 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th>CLIENT</th>
                   <th>DATE D’ENTRÉE</th>
                   <th>DATE DE SORTIE</th>
@@ -247,38 +309,48 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(c => (
-                  <tr key={c.idClient} style={{ opacity: c.actif ? 1 : 0.65 }}>
-                    <td>
-                      <strong>{c.nom} {c.prenom}</strong>
-                    </td>
-                    <td>{c.dateEntree || '—'}</td>
-                    <td>{c.dateSortie || '—'}</td>
-                    <td className="num">{c.tarifParDefaut.toLocaleString('fr-FR')} XOF</td>
-                    <td>
-                      <span className={`status ${c.actif ? 'status-active' : 'status-arch'}`}>
-                        {c.actif ? 'Actif' : 'Archivé'}
-                      </span>
-                    </td>
-                    <td className="num">
-                      <button
-                        className="btn btn-icon"
-                        title="Modifier"
-                        onClick={() => handleEdit(c)}
-                        style={{ marginRight: '4px' }}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        className="btn btn-icon"
-                        title={c.actif ? 'Désactiver (Archiver)' : 'Réactiver'}
-                        onClick={() => handleToggleStatut(c)}
-                      >
-                        <Power size={15} color={c.actif ? '#e53e3e' : '#38a169'} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map(c => {
+                  const isSelected = !!c.idClient && selectedClients.includes(c.idClient);
+                  return (
+                    <tr key={c.idClient} style={{ opacity: c.actif ? 1 : 0.65, backgroundColor: isSelected ? '#f7fafc' : undefined }}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectOne(c.idClient)}
+                        />
+                      </td>
+                      <td>
+                        <strong>{c.nom} {c.prenom}</strong>
+                      </td>
+                      <td>{c.dateEntree || '—'}</td>
+                      <td>{c.dateSortie || '—'}</td>
+                      <td className="num">{c.tarifParDefaut.toLocaleString('fr-FR')} XOF</td>
+                      <td>
+                        <span className={`status ${c.actif ? 'status-active' : 'status-arch'}`}>
+                          {c.actif ? 'Actif' : 'Archivé'}
+                        </span>
+                      </td>
+                      <td className="num">
+                        <button
+                          className="btn btn-icon"
+                          title="Modifier"
+                          onClick={() => handleEdit(c)}
+                          style={{ marginRight: '4px' }}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          className="btn btn-icon"
+                          title={c.actif ? 'Désactiver (Archiver)' : 'Réactiver'}
+                          onClick={() => handleToggleStatut(c)}
+                        >
+                          <Power size={15} color={c.actif ? '#e53e3e' : '#38a169'} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

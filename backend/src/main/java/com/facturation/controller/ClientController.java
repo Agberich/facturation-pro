@@ -22,7 +22,6 @@ public class ClientController {
     public ResponseEntity<List<Client>> obtenirTousLesClients(
             @PathVariable UUID idEntreprise,
             @RequestParam(defaultValue = "false") boolean includeInactive) {
-        
         return ResponseEntity.ok(clientService.obtenirTousLesClients(idEntreprise, includeInactive));
     }
 
@@ -47,6 +46,20 @@ public class ClientController {
     @PutMapping("/{idClient}/reactiver")
     public ResponseEntity<Void> reactiverClient(@PathVariable UUID idClient) {
         clientService.reactiverClient(idClient);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- ACTIONS EN MASSE (BULK) ---
+
+    @PutMapping("/desactiver")
+    public ResponseEntity<Void> desactiverClientsEnMasse(@RequestBody List<UUID> idsClients) {
+        clientService.desactiverClientsEnMasse(idsClients);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/reactiver")
+    public ResponseEntity<Void> reactiverClientsEnMasse(@RequestBody List<UUID> idsClients) {
+        clientService.reactiverClientsEnMasse(idsClients);
         return ResponseEntity.noContent().build();
     }
 }
