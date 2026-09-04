@@ -45,7 +45,6 @@ public class AuthService {
         // 1. Création de l'entreprise
         Entreprise entreprise = new Entreprise();
         entreprise.setNom(request.getNomEntreprise());
-        entreprise.setActif(true);
         entreprise = entrepriseRepository.save(entreprise);
 
         // 2. Initialisation des paramètres par défaut
