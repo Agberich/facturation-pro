@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu } from '../types/facturation';
 
-// Remplacez la ligne 4 :
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-1.onrender.com/api';const api = axios.create({
+// URL officielle du backend Spring Boot
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-c14q.onrender.com/api';
+
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -34,7 +36,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Intercepteur de réponse simplifié : transmission directe des erreurs
+// Intercepteur de réponse : transmission directe des erreurs
 api.interceptors.response.use(
   (response) => response,
   (error) => Promise.reject(error)
