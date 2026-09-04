@@ -88,8 +88,8 @@ const idEntreprise = React.useMemo(() => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+        <div className="utilisateurs-page">
+        <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
           <p className="text-sm text-gray-500">Gérez les accès et les rôles des membres de votre entreprise.</p>

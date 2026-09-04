@@ -75,3 +75,5 @@ export const Login: React.FC<Props> = ({ onSuccess }) => {
     </div>
   );
 };
+
+export default Login;

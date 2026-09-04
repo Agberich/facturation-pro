@@ -122,7 +122,6 @@ export const App: React.FC = () => {
     setMobile(false);
   };
 
-  // 1. Écran de chargement initial
   if (etatServeur === 'loading') {
     return (
       <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -137,7 +136,6 @@ export const App: React.FC = () => {
     );
   }
 
-  // 2. Écran d'erreur Réseau
   if (etatServeur === 'erreur' && !auth) {
     return (
       <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -155,7 +153,6 @@ export const App: React.FC = () => {
     );
   }
 
-  // 3. Écrans d'Authentification / Initialisation
   if (!auth) {
     if (!premierAdminExiste) {
       return <PremierAdmin onSuccess={handleConnexionReussie} />;
@@ -163,7 +160,6 @@ export const App: React.FC = () => {
     return <Login onSuccess={handleConnexionReussie} />;
   }
 
-  // 3.5 Écran de changement de mot de passe obligatoire
   if (afficherChangerMotDePasse || auth.doitChangerMotDePasse) {
     return (
       <ChangerMotDePasse
@@ -183,7 +179,6 @@ export const App: React.FC = () => {
     );
   }
 
-  // 4. Interface Principale
   const active = nav.find((n) => n.id === page);
   const idEntreprise = auth.idEntreprise;
   const nomUtilisateur = auth.nom || auth.utilisateur?.nom || 'Utilisateur';

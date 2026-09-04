@@ -1,118 +1,77 @@
 import React, { useState } from 'react';
-import { AuthServiceAPI } from '../services/api';
-import { ConnexionReponse } from '../types/facturation';
+import { Lock, Mail, LogIn } from 'lucide-react';
+import { AuthServiceAPI, LoginResponse } from '../services/authService';
 
 interface Props {
-  onConnexionReussie: (reponse: ConnexionReponse) => void;
+  onSuccess: (authData: LoginResponse) => void;
 }
 
-export const Login: React.FC<Props> = ({ onConnexionReussie }) => {
+export const Login: React.FC<Props> = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
-  const [chargement, setChargement] = useState(false);
-  const [erreur, setErreur] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErreur('');
-    setChargement(true);
+    setError(null);
+    setLoading(true);
+
     try {
-      const reponse = await AuthServiceAPI.connexion(email.trim(), motDePasse);
-      onConnexionReussie(reponse);
+      const response = await AuthServiceAPI.login({ email, motDePasse });
+      onSuccess(response);
     } catch (err: any) {
-      setErreur(err.response?.data?.message || 'Connexion impossible. Vérifiez vos identifiants.');
+      setError(err.response?.data?.message || 'Email ou mot de passe incorrect.');
     } finally {
-      setChargement(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f8fafc',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    }}>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          padding: '32px',
-          width: '340px',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '8px',
-            backgroundColor: '#1e293b', color: '#fff', fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 12px', fontSize: '18px',
-          }}>
-            F
-          </div>
-          <div style={{ fontWeight: 700, fontSize: '16px', color: '#0f172a' }}>
-            Facturation Pro
-          </div>
-          <div style={{ fontSize: '13px', color: '#64748b' }}>
-            Connectez-vous pour continuer
-          </div>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <LogIn size={40} className="auth-icon" />
+          <h2>Connexion</h2>
+          <p>Accédez à votre espace de gestion Facturation Pro</p>
         </div>
 
-        {erreur && (
-          <div style={{
-            padding: '10px 14px', marginBottom: '16px',
-            backgroundColor: '#fef2f2', color: '#dc2626',
-            borderRadius: '6px', fontSize: '13px',
-          }}>
-            {erreur}
+        {error && <div className="auth-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label>Adresse email</label>
+            <div className="input-icon-wrapper">
+              <Mail size={18} />
+              <input
+                type="email"
+                required
+                placeholder="votre@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
           </div>
-        )}
 
-        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
-          Email
-        </label>
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: '100%', padding: '8px 10px', marginBottom: '14px',
-            border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box',
-          }}
-        />
+          <div className="form-group">
+            <label>Mot de passe</label>
+            <div className="input-icon-wrapper">
+              <Lock size={18} />
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={motDePasse}
+                onChange={(e) => setMotDePasse(e.target.value)}
+              />
+            </div>
+          </div>
 
-        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
-          Mot de passe
-        </label>
-        <input
-          type="password"
-          required
-          value={motDePasse}
-          onChange={(e) => setMotDePasse(e.target.value)}
-          style={{
-            width: '100%', padding: '8px 10px', marginBottom: '20px',
-            border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box',
-          }}
-        />
-
-        <button
-          type="submit"
-          disabled={chargement}
-          style={{
-            width: '100%', padding: '10px', backgroundColor: '#2563eb', color: '#fff',
-            border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 600,
-            cursor: chargement ? 'default' : 'pointer', opacity: chargement ? 0.7 : 1,
-          }}
-        >
-          {chargement ? 'Connexion...' : 'Se connecter'}
-        </button>
-      </form>
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+            {loading ? 'Connexion…' : 'Se connecter'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
