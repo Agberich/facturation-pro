@@ -33,4 +33,6 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
         Utilisateur.RoleUtilisateur role,
         UUID idUtilisateur
     );
+    // Recherche s'il existe déjà au moins un utilisateur en base
+    boolean existsByDeletedAtIsNull();
 }
