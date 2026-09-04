@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu } from '../types/facturation';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-c14q.onrender.com/api';
-
-const api = axios.create({
+// Remplacez la ligne 4 :
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-1.onrender.com/api';const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
