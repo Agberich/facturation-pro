@@ -52,17 +52,19 @@ public class AuthService {
         parametre.setEntreprise(entreprise);
         parametreRepository.save(parametre);
 
-        // 3. Création de l'utilisateur Admin
-        Utilisateur admin = new Utilisateur();
-        admin.setNom(request.getNomAdmin());
-        admin.setEmail(request.getEmailAdmin());
-        admin.setMotDePasseHash(passwordEncoder.encode(request.getMotDePasse()));
-        admin.setRole(Utilisateur.RoleUtilisateur.ADMIN);
-        admin.setEntreprise(entreprise);
-        admin.setActif(true);
-        admin.setDoitChangerMotDePasse(false);
-        admin = utilisateurRepository.save(admin);
-
+     // 3. Création de l'utilisateur Admin
+     Utilisateur admin = new Utilisateur();
+     admin.setNom(request.getNom());        // <-- Remplacer getNomAdmin() par getNom()
+     admin.setPrenom(request.getPrenom());  // <-- Ajouter la lecture du prénom
+     admin.setEmail(request.getEmail());    // <-- Remplacer getEmailAdmin() par getEmail()
+     admin.setTelephone(request.getTelephone());
+     admin.setMotDePasseHash(passwordEncoder.encode(request.getMotDePasse()));
+     admin.setRole(Utilisateur.RoleUtilisateur.ADMIN);
+     admin.setEntreprise(entreprise);
+     admin.setActif(true);
+     admin.setDoitChangerMotDePasse(false);
+     admin = utilisateurRepository.save(admin);
+     
         // 4. Génération du JWT Token
         return genererReponseLogin(admin);
     }
