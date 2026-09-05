@@ -74,7 +74,9 @@ export const App: React.FC = () => {
 
   const verifierServeur = () => {
     AuthServiceAPI.verifierPremierAdminExiste()
-      .then((existe: boolean) => {
+      .then((res: any) => {
+        // Extraction sécurisée du booléen selon le format de réponse
+        const existe = typeof res === 'boolean' ? res : (res?.existe ?? true);
         setPremierAdminExiste(existe);
         setEtatServeur('ok');
       })
@@ -102,6 +104,7 @@ export const App: React.FC = () => {
 
     localStorage.setItem(CLE_STOCKAGE, JSON.stringify(objetAuth));
     setAuth(objetAuth);
+    setPremierAdminExiste(true);
 
     if (objetAuth.doitChangerMotDePasse) {
       setAfficherChangerMotDePasse(true);
@@ -114,6 +117,9 @@ export const App: React.FC = () => {
     setAfficherChangerMotDePasse(false);
     setPage('dashboard');
     setSelected(null);
+    
+    // Réérification de l'état du serveur pour charger l'écran de Login
+    verifierServeur();
   };
 
   const go = (p: Page) => {
