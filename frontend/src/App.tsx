@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './styles/App.css'; // <-- Import indispensable pour charger les classes CSS de l'application
+import './styles/app.css'; // <-- Import indispensable pour charger les classes CSS de l'application
 import { 
   LayoutDashboard, 
   FileText, 
