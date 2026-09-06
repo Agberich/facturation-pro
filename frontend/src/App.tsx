@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './styles/App.css'; // <-- Import indispensable pour charger les classes CSS de l'application
 import { 
   LayoutDashboard, 
   FileText, 
@@ -75,7 +76,6 @@ export const App: React.FC = () => {
   const verifierServeur = () => {
     AuthServiceAPI.verifierPremierAdminExiste()
       .then((res: any) => {
-        // Extraction sécurisée du booléen selon le format de réponse
         const existe = typeof res === 'boolean' ? res : (res?.existe ?? true);
         setPremierAdminExiste(existe);
         setEtatServeur('ok');
@@ -118,7 +118,6 @@ export const App: React.FC = () => {
     setPage('dashboard');
     setSelected(null);
     
-    // Réérification de l'état du serveur pour charger l'écran de Login
     verifierServeur();
   };
 
@@ -130,7 +129,7 @@ export const App: React.FC = () => {
 
   if (etatServeur === 'loading') {
     return (
-      <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <div className="auth-container">
         <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
           <RefreshCw size={32} className="spin-icon" style={{ marginBottom: 16 }} />
           <h3>Connexion au serveur backend…</h3>
@@ -144,7 +143,7 @@ export const App: React.FC = () => {
 
   if (etatServeur === 'erreur' && !auth) {
     return (
-      <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <div className="auth-container">
         <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
           <ServerOff size={40} color="#dc2626" style={{ marginBottom: 16 }} />
           <h2>Serveur indisponible</h2>
