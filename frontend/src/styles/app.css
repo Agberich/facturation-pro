@@ -1395,3 +1395,51 @@ a {
   margin-top: 12px;
   width: 100%;
 }
+/* ==========================================
+   CORRECTION DES CLASSES AUTHENTIFICATION
+   ========================================== */
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f4f7fb;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 450px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
