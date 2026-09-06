@@ -21,7 +21,7 @@ import { GestionClients } from './components/GestionClients';
 import { ImportClients } from './components/ImportClients';
 import { ParametresEntreprise } from './components/ParametresEntreprise';
 import { GestionUtilisateurs } from './pages/GestionUtilisateurs';
-import { Login } from './components/Login';
+import Login from './pages/Login';
 import { PremierAdmin } from './pages/PremierAdmin';
 import { ChangerMotDePasse } from './pages/ChangerMotDePasse';
 
