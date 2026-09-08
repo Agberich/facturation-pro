@@ -2,8 +2,7 @@ import axios from 'axios';
 import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu } from '../types/facturation';
 
 // URL officielle du backend Spring Boot
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-c14q.onrender.com/api';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-production-1bc7.up.railway.app/api';
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
