@@ -30,15 +30,18 @@ export const PremierAdmin: React.FC<Props> = ({ onSuccess }) => {
 
     setLoading(true);
 
+    // Nettoyage des données : conversion des chaînes vides en undefined pour PostgreSQL
+    const payload = {
+      nomEntreprise: formData.nomEntreprise.trim(),
+      nom: formData.nom.trim(),
+      prenom: formData.prenom.trim() || undefined,
+      telephone: formData.telephone.trim() || undefined,
+      email: formData.email.trim(),
+      motDePasse: formData.motDePasse
+    };
+
     try {
-      const response = await AuthServiceAPI.creerPremierAdmin({
-        nomEntreprise: formData.nomEntreprise,
-        nom: formData.nom,
-        prenom: formData.prenom,
-        telephone: formData.telephone,
-        email: formData.email,
-        motDePasse: formData.motDePasse
-      });
+      const response = await AuthServiceAPI.creerPremierAdmin(payload);
       onSuccess(response);
     } catch (err: any) {
       setError(err.response?.data?.message || "Erreur lors de l'initialisation du compte.");
