@@ -59,10 +59,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 List<SimpleGrantedAuthority> authorities = Collections.emptyList();
-            if (role != null) {
-            String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
-            authorities = List.of(new SimpleGrantedAuthority(formattedRole));
-}
+                if (role != null) {
+                    String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                    authorities = List.of(new SimpleGrantedAuthority(formattedRole));
+                }
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         email,
@@ -74,14 +74,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            // Jeton invalide/expiré : on laisse passer sans authentifier, Security renverra 403
+            // En cas de jeton invalide, on ne définit pas l'authentification
         }
 
         filterChain.doFilter(request, response);
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
+        // Utilisation de Decoders.BASE64 pour assurer la compatibilité avec la clé 256 bits
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
