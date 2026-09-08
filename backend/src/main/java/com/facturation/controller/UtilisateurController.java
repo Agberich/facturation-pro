@@ -22,19 +22,19 @@ public class UtilisateurController {
     private final UtilisateurService utilisateurService;
 
     @GetMapping("/entreprise/{idEntreprise}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPTABLE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_COMPTABLE', 'COMPTABLE')")
     public ResponseEntity<List<UtilisateurResponse>> listerParEntreprise(@PathVariable UUID idEntreprise) {
         return ResponseEntity.ok(utilisateurService.listerParEntreprise(idEntreprise));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPTABLE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_COMPTABLE', 'COMPTABLE')")
     public ResponseEntity<UtilisateurResponse> obtenirParId(@PathVariable UUID id) {
         return ResponseEntity.ok(utilisateurService.obtenirParId(id));
     }
 
     @PostMapping("/entreprise/{idEntreprise}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<UtilisateurResponse> creer(
             @PathVariable UUID idEntreprise,
             @Valid @RequestBody UtilisateurRequest request) {
@@ -43,7 +43,7 @@ public class UtilisateurController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<UtilisateurResponse> modifier(
             @PathVariable UUID id,
             @Valid @RequestBody UtilisateurRequest request) {
@@ -51,21 +51,21 @@ public class UtilisateurController {
     }
 
     @PatchMapping("/{id}/desactiver")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<Void> desactiver(@PathVariable UUID id) {
         utilisateurService.desactiver(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/reactiver")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<Void> reactiver(@PathVariable UUID id) {
         utilisateurService.reactiver(id);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<Void> supprimer(@PathVariable UUID id) {
         utilisateurService.supprimer(id);
         return ResponseEntity.noContent().build();
