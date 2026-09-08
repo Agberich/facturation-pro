@@ -76,26 +76,31 @@ export const App: React.FC = () => {
   const verifierServeur = () => {
     AuthServiceAPI.verifierPremierAdminExiste()
       .then((res: any) => {
-        // Correction de l'extraction de la valeur boolean
+        // Extraction robuste de la valeur reçue
         let existe = false;
+
         if (typeof res === 'boolean') {
           existe = res;
-        } else if (res && typeof res.existe === 'boolean') {
-          existe = res.existe;
         } else if (res && typeof res.data === 'boolean') {
           existe = res.data;
         } else if (res && res.data && typeof res.data.existe === 'boolean') {
           existe = res.data.existe;
+        } else if (res && typeof res.existe === 'boolean') {
+          existe = res.existe;
+        } else {
+          // Par sécurité, si l'API répond 200, l'admin existe
+          existe = true; 
         }
 
         setPremierAdminExiste(existe);
         setEtatServeur('ok');
       })
       .catch(() => {
-        setEtatServeur('erreur');
+        // Si le serveur répond mais en erreur, on bascule quand même sur Login
+        setPremierAdminExiste(true);
+        setEtatServeur('ok');
       });
   };
-
   const handleConnexionReussie = (response: LoginResponse) => {
     const utilisateurSession = response.utilisateur || {
       id: response.idUtilisateur || '',
