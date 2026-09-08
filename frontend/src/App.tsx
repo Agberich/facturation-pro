@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './styles/app.css'; // <-- Import indispensable pour charger les classes CSS de l'application
+import './styles/app.css'; 
 import { 
   LayoutDashboard, 
   FileText, 
@@ -76,7 +76,18 @@ export const App: React.FC = () => {
   const verifierServeur = () => {
     AuthServiceAPI.verifierPremierAdminExiste()
       .then((res: any) => {
-        const existe = typeof res === 'boolean' ? res : (res?.existe ?? true);
+        // Correction de l'extraction de la valeur boolean
+        let existe = false;
+        if (typeof res === 'boolean') {
+          existe = res;
+        } else if (res && typeof res.existe === 'boolean') {
+          existe = res.existe;
+        } else if (res && typeof res.data === 'boolean') {
+          existe = res.data;
+        } else if (res && res.data && typeof res.data.existe === 'boolean') {
+          existe = res.data.existe;
+        }
+
         setPremierAdminExiste(existe);
         setEtatServeur('ok');
       })
