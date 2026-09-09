@@ -1,6 +1,6 @@
 package com.facturation.service;
 
-import com.facturation.config.JwtService;
+import com.facturation.service.JwtService;
 import com.facturation.dto.*;
 import com.facturation.entity.Entreprise;
 import com.facturation.entity.Parametre;
