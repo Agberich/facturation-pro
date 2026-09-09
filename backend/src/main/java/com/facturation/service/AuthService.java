@@ -1,6 +1,5 @@
 package com.facturation.service;
 
-import com.facturation.service.JwtService;
 import com.facturation.dto.*;
 import com.facturation.entity.Entreprise;
 import com.facturation.entity.Parametre;
@@ -14,10 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -52,19 +47,19 @@ public class AuthService {
         parametre.setEntreprise(entreprise);
         parametreRepository.save(parametre);
 
-     // 3. Création de l'utilisateur Admin
-     Utilisateur admin = new Utilisateur();
-     admin.setNom(request.getNom());        // <-- Remplacer getNomAdmin() par getNom()
-     admin.setPrenom(request.getPrenom());  // <-- Ajouter la lecture du prénom
-     admin.setEmail(request.getEmail());    // <-- Remplacer getEmailAdmin() par getEmail()
-     admin.setTelephone(request.getTelephone());
-     admin.setMotDePasseHash(passwordEncoder.encode(request.getMotDePasse()));
-     admin.setRole(Utilisateur.RoleUtilisateur.ADMIN);
-     admin.setEntreprise(entreprise);
-     admin.setActif(true);
-     admin.setDoitChangerMotDePasse(false);
-     admin = utilisateurRepository.save(admin);
-     
+        // 3. Création de l'utilisateur Admin
+        Utilisateur admin = new Utilisateur();
+        admin.setNom(request.getNom());
+        admin.setPrenom(request.getPrenom());
+        admin.setEmail(request.getEmail());
+        admin.setTelephone(request.getTelephone());
+        admin.setMotDePasseHash(passwordEncoder.encode(request.getMotDePasse()));
+        admin.setRole(Utilisateur.RoleUtilisateur.ADMIN);
+        admin.setEntreprise(entreprise);
+        admin.setActif(true);
+        admin.setDoitChangerMotDePasse(false);
+        admin = utilisateurRepository.save(admin);
+
         // 4. Génération du JWT Token
         return genererReponseLogin(admin);
     }
@@ -102,12 +97,20 @@ public class AuthService {
 
     private LoginResponseDTO genererReponseLogin(Utilisateur utilisateur) {
         String roleStr = utilisateur.getRole() != null ? utilisateur.getRole().name() : null;
+        String idEntrepriseStr = utilisateur.getEntreprise() != null && utilisateur.getEntreprise().getIdEntreprise() != null 
+                ? utilisateur.getEntreprise().getIdEntreprise().toString() 
+                : null;
+        String idUtilisateurStr = utilisateur.getIdUtilisateur() != null 
+                ? utilisateur.getIdUtilisateur().toString() 
+                : null;
 
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", roleStr);
-        claims.put("idEntreprise", utilisateur.getEntreprise() != null ? utilisateur.getEntreprise().getIdEntreprise() : null);
-
-        String token = jwtService.generateToken(utilisateur.getEmail(), claims);
+        // Génération du token via la signature à 4 arguments de JwtService
+        String token = jwtService.generateToken(
+                utilisateur.getEmail(),
+                roleStr,
+                idEntrepriseStr,
+                idUtilisateurStr
+        );
 
         return LoginResponseDTO.builder()
                 .token(token)

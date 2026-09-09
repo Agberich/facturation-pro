@@ -1,11 +1,11 @@
 package com.facturation.config;
 
+import com.facturation.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -14,13 +14,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-
 import java.io.IOException;
-import java.security.Key;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,8 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Value("${app.jwt.secret}")
-    private String secretKey;
+    private final JwtService jwtService;
 
     @Override
     protected void doFilterInternal(
@@ -48,14 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         try {
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(getSignInKey())
-                    .build()
-                    .parseClaimsJws(jwt)
-                    .getBody();
-
-            String email = claims.getSubject();
-            String role = claims.get("role", String.class);
+            String email = jwtService.extractUsername(jwt);
+            String role = jwtService.extractRole(jwt);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 List<SimpleGrantedAuthority> authorities = Collections.emptyList();
@@ -74,15 +61,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            // En cas de jeton invalide, on ne définit pas l'authentification
+            // En cas de jeton invalide, l'authentification n'est pas définie
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private Key getSignInKey() {
-        // Utilisation de Decoders.BASE64 pour assurer la compatibilité avec la clé 256 bits
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 }
