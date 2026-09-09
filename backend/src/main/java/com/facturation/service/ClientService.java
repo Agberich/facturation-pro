@@ -38,7 +38,9 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<Client> obtenirTousLesClients(UUID idEntreprise) {
-        return obtenirTousLesClients(idEntreprise, false);
+        // Par defaut, renvoie tous les clients (actifs + inactifs non supprimes) 
+        // pour eviter le filtrage intempestif dans la vue globale de l'UI
+        return obtenirTousLesClients(idEntreprise, true);
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +65,9 @@ public class ClientService {
                 .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable avec l'ID : " + idEntreprise));
 
         client.setEntreprise(entreprise);
-        client.setActif(true);
+        if (client.getActif() == null) {
+            client.setActif(true);
+        }
         client.setDeletedAt(null);
         
         Client clientEnregistre = clientRepository.save(client);
@@ -86,7 +90,12 @@ public class ClientService {
         clientExistant.setTarifParDefaut(clientModifie.getTarifParDefaut());
         clientExistant.setCommentaire(clientModifie.getCommentaire());
 
-        log.info("Client mis à jour : ID {}", idClient);
+        // Copie explicite du statut actif/inactif
+        if (clientModifie.getActif() != null) {
+            clientExistant.setActif(clientModifie.getActif());
+        }
+
+        log.info("Client mis à jour : ID {}, Actif: {}", idClient, clientExistant.getActif());
         return clientRepository.save(clientExistant);
     }
 
@@ -107,8 +116,6 @@ public class ClientService {
         clientRepository.save(client);
         log.info("Client réactivé : ID {}", idClient);
     }
-
-    // --- LOGIQUE MASSE (BULK) ---
 
     @Transactional
     public void desactiverClientsEnMasse(List<UUID> idsClients) {

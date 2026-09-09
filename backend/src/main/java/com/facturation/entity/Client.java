@@ -9,8 +9,13 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "client", schema = "app_facturation")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter 
+@Setter 
+@NoArgsConstructor 
+@AllArgsConstructor 
+@Builder
 public class Client {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id_client", updatable = false, nullable = false)
@@ -41,8 +46,7 @@ public class Client {
     private BigDecimal tarifParDefaut = BigDecimal.ZERO;
 
     @Column(name = "actif", nullable = false)
-    @Builder.Default
-    private Boolean actif = true;
+    private Boolean actif;
 
     @Column(name = "commentaire")
     private String commentaire;
@@ -66,5 +70,7 @@ public class Client {
     }
 
     @PreUpdate
-    protected void onUpdate() { this.updatedAt = OffsetDateTime.now(); }
+    protected void onUpdate() { 
+        this.updatedAt = OffsetDateTime.now(); 
+    }
 }
