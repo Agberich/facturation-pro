@@ -1,6 +1,7 @@
 package com.facturation.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,6 +27,12 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
 
+    // Renseignée via la variable d'environnement CORS_ALLOWED_ORIGINS sur Railway.
+    // Plusieurs origines séparées par des virgules, ex :
+    // https://ton-projet.vercel.app,https://ton-projet-git-main-toncompte.vercel.app
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
@@ -45,11 +52,12 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Id-Entreprise", "X-Id-Utilisateur"));
         config.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
-        config.setAllowCredentials(true);
+        // Pas de cookies ici : le JWT part en header Authorization (voir api.ts),
+        // donc allowCredentials n'apporte rien et complique inutilement la config CORS.
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

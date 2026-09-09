@@ -11,7 +11,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/parametres")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ParametreController {
 
     private final ParametreService parametreService;

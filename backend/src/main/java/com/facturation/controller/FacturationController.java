@@ -14,7 +14,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/facturations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class FacturationController {
 
     private final FacturationService facturationService;

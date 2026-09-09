@@ -17,11 +17,14 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${application.security.jwt.secret-key}")
+    // Ces deux clés correspondent EXACTEMENT à app.jwt.secret et app.jwt.expiration-heures
+    // définies dans application.yaml. Avant, elles pointaient vers
+    // application.security.jwt.* qui n'existe nulle part -> échec au démarrage.
+    @Value("${app.jwt.secret}")
     private String secretKey;
 
-    @Value("${application.security.jwt.expiration:86400000}")
-    private long jwtExpiration;
+    @Value("${app.jwt.expiration-heures:12}")
+    private long jwtExpirationHeures;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -38,7 +41,8 @@ public class JwtService {
         extraClaims.put("idEntreprise", idEntreprise);
         extraClaims.put("idUtilisateur", idUtilisateur);
         
-        return buildToken(extraClaims, email, jwtExpiration);
+        long jwtExpirationMs = jwtExpirationHeures * 3_600_000L;
+        return buildToken(extraClaims, email, jwtExpirationMs);
     }
 
     private String buildToken(Map<String, Object> extraClaims, String username, long expiration) {

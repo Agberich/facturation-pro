@@ -15,7 +15,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/import")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ImportController {
 
     private static final Logger log = LoggerFactory.getLogger(ImportController.class);
