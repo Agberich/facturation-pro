@@ -21,13 +21,13 @@ public class UtilisateurController {
     private final UtilisateurService utilisateurService;
 
     @GetMapping("/entreprise/{idEntreprise}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_COMPTABLE', 'COMPTABLE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<List<UtilisateurResponse>> listerParEntreprise(@PathVariable UUID idEntreprise) {
         return ResponseEntity.ok(utilisateurService.listerParEntreprise(idEntreprise));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_COMPTABLE', 'COMPTABLE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<UtilisateurResponse> obtenirParId(@PathVariable UUID id) {
         return ResponseEntity.ok(utilisateurService.obtenirParId(id));
     }

@@ -34,7 +34,7 @@ public class UtilisateurService {
 
     @Transactional(readOnly = true)
     public UtilisateurResponse obtenirParId(UUID id) {
-        Utilisateur utilisateur = utilisateurRepository.findById(id)
+        Utilisateur utilisateur = utilisateurRepository.findByIdUtilisateurAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé avec l'ID : " + id));
         return mapToResponse(utilisateur);
     }

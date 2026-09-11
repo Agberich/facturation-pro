@@ -19,6 +19,8 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
 
     Optional<Utilisateur> findByEmailAndDeletedAtIsNull(String email);
 
+    Optional<Utilisateur> findByIdUtilisateurAndDeletedAtIsNull(UUID idUtilisateur);
+
     boolean existsByEmail(String email);
 
     boolean existsByEmailAndIdUtilisateurNot(String email, UUID idUtilisateur);

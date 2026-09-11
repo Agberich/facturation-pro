@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -41,8 +42,20 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/**").permitAll()
-            // AUTORISATION ÉTENDUE : Couvre /api/utilisateurs, /api/utilisateurs/** et /api/utilisateurs/entreprise/**
+            // Gestion des utilisateurs : reservee a ADMIN, y compris la simple consultation.
             .requestMatchers("/api/utilisateurs", "/api/utilisateurs/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+            // CONSULTATION est un role lecture seule : toute action d'ecriture (creer, modifier,
+            // valider, importer, desactiver, supprimer...) est reservee a ADMIN et COMPTABLE.
+            // La lecture (GET : clients, facturations, exports PDF/Excel/CSV, parametres...)
+            // reste ouverte a tout utilisateur authentifie via la regle anyRequest() plus bas.
+            .requestMatchers(HttpMethod.POST, "/api/**")
+                .hasAnyAuthority("ROLE_ADMIN", "ADMIN", "ROLE_COMPTABLE", "COMPTABLE")
+            .requestMatchers(HttpMethod.PUT, "/api/**")
+                .hasAnyAuthority("ROLE_ADMIN", "ADMIN", "ROLE_COMPTABLE", "COMPTABLE")
+            .requestMatchers(HttpMethod.PATCH, "/api/**")
+                .hasAnyAuthority("ROLE_ADMIN", "ADMIN", "ROLE_COMPTABLE", "COMPTABLE")
+            .requestMatchers(HttpMethod.DELETE, "/api/**")
+                .hasAnyAuthority("ROLE_ADMIN", "ADMIN", "ROLE_COMPTABLE", "COMPTABLE")
             .anyRequest().authenticated()
         )
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
