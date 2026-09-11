@@ -111,18 +111,34 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
   const handleToggleStatut = async (client: Client) => {
     if (!client.idClient) return;
 
-    const messageConfirmation = client.actif
-      ? 'Voulez-vous vraiment désactiver ce client ?'
-      : 'Voulez-vous réactiver ce client ?';
+    if (client.actif) {
+      // Depart reel (client present X jours ce mois-ci puis parti) vs simple
+      // erreur de saisie a annuler : on distingue via une date de sortie
+      // optionnelle, plutot qu'un simple on/off qui ne demandait rien.
+      const aujourdHui = new Date().toISOString().slice(0, 10);
+      const saisie = window.prompt(
+        "Désactiver ce client.\n\n" +
+        "S'il s'agit d'un départ réel en cours de mois, indiquez sa date de sortie " +
+        "(AAAA-MM-JJ) pour que la facturation en cours soit calculée au prorata.\n" +
+        "Laissez le champ vide s'il s'agit d'une erreur de saisie à annuler " +
+        "(le client sera alors entièrement retiré des facturations en brouillon).",
+        aujourdHui
+      );
+      if (saisie === null) return; // annulé
 
-    if (!window.confirm(messageConfirmation)) return;
-
-    try {
-      if (client.actif) {
-        await ClientServiceAPI.desactiverClient(client.idClient);
-      } else {
-        await ClientServiceAPI.reactiverClient(client.idClient);
+      const dateSortie = saisie.trim() === '' ? undefined : saisie.trim();
+      try {
+        await ClientServiceAPI.desactiverClient(client.idClient, dateSortie);
+        await load();
+      } catch {
+        setError('Impossible de désactiver ce client.');
       }
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous réactiver ce client ?')) return;
+    try {
+      await ClientServiceAPI.reactiverClient(client.idClient);
       await load();
     } catch {
       setError('Impossible de modifier le statut du client.');

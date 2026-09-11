@@ -3,10 +3,12 @@ package com.facturation.controller;
 import com.facturation.entity.Client;
 import com.facturation.service.ClientService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,8 +39,10 @@ public class ClientController {
     }
 
     @PutMapping("/{idClient}/desactiver")
-    public ResponseEntity<Void> desactiverClient(@PathVariable UUID idClient) {
-        clientService.desactiverClient(idClient);
+    public ResponseEntity<Void> desactiverClient(
+            @PathVariable UUID idClient,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateSortie) {
+        clientService.desactiverClient(idClient, dateSortie);
         return ResponseEntity.noContent().build();
     }
 

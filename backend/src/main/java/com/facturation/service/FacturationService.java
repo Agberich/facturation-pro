@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -100,6 +102,22 @@ public class FacturationService {
         UUID idEntreprise = facturation.getEntreprise().getIdEntreprise();
         List<Client> clientsActifs = clientRepository
                 .findByEntrepriseIdEntrepriseAndActifTrueAndDeletedAtIsNull(idEntreprise);
+
+        Set<UUID> idsClientsActifs = clientsActifs.stream()
+                .map(Client::getIdClient)
+                .collect(Collectors.toSet());
+
+        // Purge des lignes devenues orphelines : un client peut avoir ete
+        // desactive (actif=false) depuis la derniere generation. Sans ce
+        // nettoyage, sa ligne restait figee avec ses anciennes valeurs au
+        // lieu de disparaitre du recalcul.
+        List<LigneFacturation> lignesExistantes = ligneFacturationRepository
+                .findByFacturationIdFacturationOrderByOrdreAffichageAsc(idFacturation);
+        for (LigneFacturation ligne : lignesExistantes) {
+            if (!idsClientsActifs.contains(ligne.getClient().getIdClient())) {
+                ligneFacturationRepository.delete(ligne);
+            }
+        }
 
         int ordre = ligneFacturationRepository
                 .findByFacturationIdFacturationOrderByOrdreAffichageAsc(idFacturation)

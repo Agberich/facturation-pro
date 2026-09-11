@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -100,12 +101,18 @@ public class ClientService {
     }
 
     @Transactional
-    public void desactiverClient(UUID idClient) {
+    public void desactiverClient(UUID idClient, LocalDate dateSortie) {
         Client client = obtenirClientParId(idClient);
         client.setActif(false);
         client.setDeletedAt(null);
+        // Si une date de sortie est fournie (depart reel en cours de periode),
+        // on la conserve : la facturation en cours pourra proratiser jusqu'a
+        // cette date au lieu de retirer le client d'un coup au recalcul.
+        if (dateSortie != null) {
+            client.setDateSortie(dateSortie);
+        }
         clientRepository.save(client);
-        log.info("Client désactivé (archivé) : ID {}", idClient);
+        log.info("Client désactivé (archivé) : ID {}, dateSortie: {}", idClient, dateSortie);
     }
 
     @Transactional

@@ -54,8 +54,10 @@ export const ClientServiceAPI = {
     const response = await api.put(`/clients/${idClient}`, client);
     return response.data;
   },
-  desactiverClient: async (idClient: string): Promise<void> => {
-    await api.put(`/clients/${idClient}/desactiver`);
+  desactiverClient: async (idClient: string, dateSortie?: string): Promise<void> => {
+    await api.put(`/clients/${idClient}/desactiver`, null, {
+      params: dateSortie ? { dateSortie } : undefined
+    });
   },
   reactiverClient: async (idClient: string): Promise<void> => {
     await api.put(`/clients/${idClient}/reactiver`);
