@@ -187,17 +187,25 @@ public class FacturationService {
                     "Impossible de valider une facturation sans aucune ligne. Générez d'abord les lignes de facturation.");
         }
 
-        String nouveauNumero = (String) entityManager.createNativeQuery(
-                "SELECT app_facturation.generer_numero_facture(:idEntreprise, :annee)")
-                .setParameter("idEntreprise", facture.getEntreprise().getIdEntreprise())
-                .setParameter("annee", facture.getAnnee())
-                .getSingleResult();
+        // Un numéro n'est généré que la toute première fois qu'une facturation est
+        // validée. Si elle a déjà un numéro (cas d'une réouverture pour correction,
+        // suivie d'une nouvelle validation), on le conserve : c'est toujours la même
+        // facture, pas une nouvelle — seul son contenu a été corrigé.
+        if (facture.getNumeroFacture() == null) {
+            String nouveauNumero = (String) entityManager.createNativeQuery(
+                    "SELECT app_facturation.generer_numero_facture(:idEntreprise, :annee)")
+                    .setParameter("idEntreprise", facture.getEntreprise().getIdEntreprise())
+                    .setParameter("annee", facture.getAnnee())
+                    .getSingleResult();
+            facture.setNumeroFacture(nouveauNumero);
+            log.info("Facture validée avec le nouveau numéro {} (ID: {})", nouveauNumero, idFacturation);
+        } else {
+            log.info("Facture revalidée en conservant son numéro {} (ID: {})", facture.getNumeroFacture(), idFacturation);
+        }
 
-        facture.setNumeroFacture(nouveauNumero);
         facture.setStatut(Facturation.StatutFacturation.VALIDEE);
         facture.setDateValidation(OffsetDateTime.now());
 
-        log.info("Facture validée avec le numéro {} (ID: {})", nouveauNumero, idFacturation);
         return facturationRepository.save(facture);
     }
 
