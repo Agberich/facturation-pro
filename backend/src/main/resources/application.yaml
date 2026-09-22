@@ -11,10 +11,17 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      max-lifetime: 600000        # Fix Neon connection pooling (10 mins)
-      idle-timeout: 300000        # 5 mins
+      max-lifetime: 600000        # Recycle les connexions avant qu'elles ne deviennent stagnantes (10 min)
+      idle-timeout: 300000        # Ferme les connexions inactives au-dela de minimum-idle (5 min)
       validation-timeout: 3000    # 3 secs
-      keepalive-time: 60000       # Keepalive ping every 60 secs
+      minimum-idle: 0             # Autorise le pool a redescendre a 0 connexion en periode calme,
+                                   # pour que Neon puisse suspendre son calcul (scale to zero) et
+                                   # arreter de consommer des heures-CU quand personne n'utilise l'appli.
+      maximum-pool-size: 10
+      # Pas de keepalive-time : un ping toutes les 60s empechait Neon de jamais
+      # considerer la base inactive, donc le calcul tournait 24h/24 en continu.
+      # HikariCP revalide/recree une connexion automatiquement au prochain
+      # appel (validation-timeout ci-dessus) ; Neon se reveille en 200ms-2s.
 
   jpa:
     hibernate:
