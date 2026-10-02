@@ -53,6 +53,9 @@ public class Facturation {
     @Column(name = "date_validation")
     private OffsetDateTime dateValidation;
 
+    @Column(name = "date_paiement")
+    private OffsetDateTime datePaiement;
+
     @Column(name = "commentaire")
     private String commentaire;
 
@@ -65,7 +68,7 @@ public class Facturation {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    public enum StatutFacturation { BROUILLON, VALIDEE, ARCHIVE }
+    public enum StatutFacturation { BROUILLON, VALIDEE, PAYEE, ARCHIVE }
 
     @PrePersist
     protected void onCreate() {

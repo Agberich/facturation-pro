@@ -44,6 +44,15 @@ public class ExportService {
             "Nb de jours presents", "Montant total H.T", "Code TVA", "Montant TVA", "Montant TTC"
     };
 
+    // Couleurs du PDF (alignées sur le bleu de l'application)
+    private static final Color BLEU = new Color(23, 92, 211);
+    private static final Color BLEU_FONCE = new Color(16, 24, 40);
+    private static final Color BLEU_TRES_CLAIR = new Color(239, 248, 255);
+    private static final Color BLEU_TOTAL = new Color(209, 233, 255);
+    private static final Color VERT_PAYEE = new Color(2, 122, 72);
+    private static final Color ORANGE_BROUILLON = new Color(181, 71, 8);
+    private static final Color GRIS_ARCHIVE = new Color(102, 112, 133);
+
     private static final Set<Integer> COLONNES_CENTREES = Set.of(0, 1, 3, 4, 7, 9, 10, 12);
     private static final Set<Integer> COLONNES_MONTANTS = Set.of(8, 11, 13, 14);
 
@@ -84,12 +93,12 @@ public class ExportService {
 
         document.open();
 
-        com.lowagie.text.Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK);
-        com.lowagie.text.Font entrepriseFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
+        com.lowagie.text.Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, BLEU);
+        com.lowagie.text.Font entrepriseFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, BLEU_FONCE);
         com.lowagie.text.Font infoFont = FontFactory.getFont(FontFactory.HELVETICA, 9, new Color(80, 80, 80));
         com.lowagie.text.Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7, Color.WHITE);
         com.lowagie.text.Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 7, Color.BLACK);
-        com.lowagie.text.Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.BLACK);
+        com.lowagie.text.Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BLEU_FONCE);
 
         // --- En-tête ---
         PdfPTable enTete = new PdfPTable(2);
@@ -124,9 +133,19 @@ public class ExportService {
         periode.setAlignment(Element.ALIGN_RIGHT);
         celluleFacture.addElement(periode);
         
-        Paragraph statut = new Paragraph("Statut : " + facture.getStatut(), infoFont);
+        Paragraph statut = new Paragraph();
+        statut.add(new Chunk("Statut : ", infoFont));
+        statut.add(new Chunk(libelleStatut(facture.getStatut()),
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, couleurStatut(facture.getStatut()))));
         statut.setAlignment(Element.ALIGN_RIGHT);
         celluleFacture.addElement(statut);
+
+        if (facture.getStatut() == Facturation.StatutFacturation.PAYEE && facture.getDatePaiement() != null) {
+            Paragraph paiement = new Paragraph(
+                    "Payée le : " + facture.getDatePaiement().toLocalDate().format(DATE_FR), infoFont);
+            paiement.setAlignment(Element.ALIGN_RIGHT);
+            celluleFacture.addElement(paiement);
+        }
         
         if (!devise.isBlank()) {
             Paragraph deviseParagraphe = new Paragraph("Devise : " + devise, infoFont);
@@ -153,10 +172,15 @@ public class ExportService {
 
         int index = 1;
         for (LigneFacturation ligne : lignes) {
+            boolean ligneAlternee = index % 2 == 0;
             String[] valeurs = construireLignePdf(index++, facture, ligne, codeTva);
             for (int i = 0; i < valeurs.length; i++) {
                 PdfPCell cell = new PdfPCell(new Phrase(valeurs[i], bodyFont));
                 cell.setPadding(3);
+                cell.setBorderColor(BLEU_TOTAL);
+                if (ligneAlternee) {
+                    cell.setBackgroundColor(BLEU_TRES_CLAIR);
+                }
                 if (COLONNES_MONTANTS.contains(i)) {
                     cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 } else if (COLONNES_CENTREES.contains(i)) {
@@ -176,7 +200,7 @@ public class ExportService {
         celluleTotalLabel.setColspan(11);
         celluleTotalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
         celluleTotalLabel.setPadding(4);
-        celluleTotalLabel.setBackgroundColor(new Color(235, 235, 235));
+        celluleTotalLabel.setBackgroundColor(BLEU_TOTAL);
         table.addCell(celluleTotalLabel);
 
         table.addCell(celluleTotal(formatMontantAffichage(totalHt), totalFont));
@@ -194,7 +218,7 @@ public class ExportService {
         PdfPCell cell = new PdfPCell(new Phrase(texte, font));
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cell.setPadding(4);
-        cell.setBackgroundColor(new Color(235, 235, 235));
+        cell.setBackgroundColor(BLEU_TOTAL);
         return cell;
     }
 
@@ -294,7 +318,7 @@ public class ExportService {
             ligneFacture.createCell(0).setCellValue("Facture :");
             ligneFacture.getCell(0).setCellStyle(styleTitre);
             String numeroAffiche = facture.getNumeroFacture() != null ? facture.getNumeroFacture() : "BROUILLON";
-            ligneFacture.createCell(1).setCellValue(numeroAffiche + " - Période " + facture.getMois() + "/" + facture.getAnnee() + " - Statut " + facture.getStatut());
+            ligneFacture.createCell(1).setCellValue(numeroAffiche + " - Période " + facture.getMois() + "/" + facture.getAnnee() + " - Statut " + libelleStatut(facture.getStatut()));
 
             org.apache.poi.ss.usermodel.Row ligneDevise = sheet.createRow(r++);
             ligneDevise.createCell(0).setCellValue("Devise :");
@@ -423,6 +447,30 @@ public class ExportService {
     // Helpers
     // =========================================================================
 
+    private String libelleStatut(Facturation.StatutFacturation statut) {
+        if (statut == null) {
+            return "";
+        }
+        return switch (statut) {
+            case BROUILLON -> "Brouillon";
+            case VALIDEE -> "Validée";
+            case PAYEE -> "Payée";
+            case ARCHIVE -> "Archivée";
+        };
+    }
+
+    private Color couleurStatut(Facturation.StatutFacturation statut) {
+        if (statut == null) {
+            return GRIS_ARCHIVE;
+        }
+        return switch (statut) {
+            case BROUILLON -> ORANGE_BROUILLON;
+            case VALIDEE -> BLEU;
+            case PAYEE -> VERT_PAYEE;
+            case ARCHIVE -> GRIS_ARCHIVE;
+        };
+    }
+
     private String[] construireLignePdf(int index, Facturation facture, LigneFacturation ligne, String codeTva) {
         Client client = ligne.getClient();
         return new String[]{
@@ -517,7 +565,7 @@ public class ExportService {
 
     private void addCellToHeader(PdfPTable table, String text, com.lowagie.text.Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
-        cell.setBackgroundColor(new Color(60, 60, 60));
+        cell.setBackgroundColor(BLEU);
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setPadding(4);
         table.addCell(cell);

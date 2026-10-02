@@ -13,7 +13,6 @@ const empty: Client = {
   dateNaissance: '',
   dateEntree: new Date().toISOString().slice(0, 10),
   dateSortie: '',
-  tarifParDefaut: 0,
   actif: true,
   commentaire: ''
 };
@@ -39,7 +38,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       setSelectedClients([]); // Réinitialise la sélection lors du rechargement
       setError('');
     } catch {
-      setError('Impossible de charger les clients.');
+      setError('Impossible de charger les personnes accueillies.');
     } finally {
       setLoading(false);
     }
@@ -76,7 +75,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
     if (selectedClients.length === 0) return;
 
     const label = action === 'desactiver' ? 'désactiver' : 'réactiver';
-    if (!window.confirm(`Voulez-vous vraiment ${label} les ${selectedClients.length} client(s) sélectionné(s) ?`)) {
+    if (!window.confirm(`Voulez-vous vraiment ${label} les ${selectedClients.length} personne(s) accueillie(s) sélectionnée(s) ?`)) {
       return;
     }
 
@@ -88,7 +87,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       }
       await load();
     } catch {
-      setError(`Impossible de ${label} les clients sélectionnés.`);
+      setError(`Impossible de ${label} les personnes accueillies sélectionnées.`);
     }
   };
 
@@ -117,11 +116,11 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       // optionnelle, plutot qu'un simple on/off qui ne demandait rien.
       const aujourdHui = new Date().toISOString().slice(0, 10);
       const saisie = window.prompt(
-        "Désactiver ce client.\n\n" +
+        "Désactiver cette personne accueillie.\n\n" +
         "S'il s'agit d'un départ réel en cours de mois, indiquez sa date de sortie " +
         "(AAAA-MM-JJ) pour que la facturation en cours soit calculée au prorata.\n" +
         "Laissez le champ vide s'il s'agit d'une erreur de saisie à annuler " +
-        "(le client sera alors entièrement retiré des facturations en brouillon).",
+        "(la personne sera alors entièrement retirée des facturations en brouillon).",
         aujourdHui
       );
       if (saisie === null) return; // annulé
@@ -131,17 +130,17 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
         await ClientServiceAPI.desactiverClient(client.idClient, dateSortie);
         await load();
       } catch {
-        setError('Impossible de désactiver ce client.');
+        setError('Impossible de désactiver cette personne accueillie.');
       }
       return;
     }
 
-    if (!window.confirm('Voulez-vous réactiver ce client ?')) return;
+    if (!window.confirm('Voulez-vous réactiver cette personne accueillie ?')) return;
     try {
       await ClientServiceAPI.reactiverClient(client.idClient);
       await load();
     } catch {
-      setError('Impossible de modifier le statut du client.');
+      setError('Impossible de modifier le statut de la personne accueillie.');
     }
   };
 
@@ -177,7 +176,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       setOpen(false);
       await load();
     } catch (e: any) {
-      setError(e.response?.data?.message || 'Impossible d’enregistrer le client.');
+      setError(e.response?.data?.message || 'Impossible d’enregistrer la personne accueillie.');
     } finally {
       setSaving(false);
     }
@@ -190,12 +189,12 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       <div className="page-head">
         <div>
           <div className="eyebrow">Répertoire</div>
-          <h1 className="page-title">Clients</h1>
+          <h1 className="page-title">Personnes accueillies</h1>
           <p className="page-desc">Gérez les personnes prises en compte dans vos facturations mensuelles.</p>
         </div>
         <button className="btn btn-primary" onClick={handleOpenNew}>
           <Plus size={15} />
-          {open && !editingId ? 'Fermer' : 'Nouveau client'}
+          {open && !editingId ? 'Fermer' : 'Nouvelle personne accueillie'}
         </button>
       </div>
 
@@ -204,7 +203,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       {/* BARRE D'ACTIONS GROUPÉES */}
       {selectedClients.length > 0 && (
         <div className="notice" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#edf2f7', borderColor: '#cbd5e0' }}>
-          <span><strong>{selectedClients.length}</strong> client(s) sélectionné(s)</span>
+          <span><strong>{selectedClients.length}</strong> personne(s) accueillie(s) sélectionnée(s)</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button className="btn btn-secondary" onClick={() => handleBulkAction('desactiver')} style={{ color: '#e53e3e' }}>
               <XSquare size={15} /> Désactiver la sélection
@@ -218,7 +217,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
 
       {open && (
         <form className="card form-card" onSubmit={save}>
-          <div className="section-title">{editingId ? 'Modifier le client' : 'Nouveau client'}</div>
+          <div className="section-title">{editingId ? 'Modifier la personne accueillie' : 'Nouvelle personne accueillie'}</div>
           <div className="section-sub" style={{ marginBottom: 16 }}>
             Les champs marqués d’un * sont obligatoires.
           </div>
@@ -244,10 +243,6 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
               <input type="date" value={form.dateSortie || ''} onChange={e => setForm({ ...form, dateSortie: e.target.value })} />
             </div>
             <div className="field">
-              <label>Tarif par défaut</label>
-              <input type="number" min="0" step="0.01" value={form.tarifParDefaut} onChange={e => setForm({ ...form, tarifParDefaut: +e.target.value })} />
-            </div>
-            <div className="field">
               <label>Statut</label>
               <select value={form.actif ? 'actif' : 'inactif'} onChange={e => setForm({ ...form, actif: e.target.value === 'actif' })}>
                 <option value="actif">Actif</option>
@@ -261,7 +256,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
             <div className="form-full" style={{ display: 'flex', gap: '8px' }}>
               <button className="btn btn-success" disabled={saving}>
                 <Save size={14} />
-                {saving ? 'Enregistrement…' : editingId ? 'Mettre à jour' : 'Enregistrer le client'}
+                {saving ? 'Enregistrement…' : editingId ? 'Mettre à jour' : 'Enregistrer la personne'}
               </button>
               <button type="button" className="btn btn-secondary" onClick={() => { setOpen(false); setEditingId(null); }}>
                 Annuler
@@ -274,15 +269,15 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
       <section className="card table-card">
         <div className="table-tools">
           <div>
-            <div className="section-title">Répertoire clients</div>
+            <div className="section-title">Répertoire des personnes accueillies</div>
             <div className="section-sub">
-              {clients.length} client{clients.length !== 1 ? 's' : ''}
+              {clients.length} personne{clients.length !== 1 ? 's' : ''} accueillie{clients.length !== 1 ? 's' : ''}
             </div>
           </div>
           <div className="search" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <Search size={15} />
-              <input placeholder="Rechercher un client…" value={search} onChange={e => setSearch(e.target.value)} />
+              <input placeholder="Rechercher une personne…" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               <input
@@ -302,7 +297,7 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
             <div className="empty-icon">
               <UserRound size={19} />
             </div>
-            Aucun client trouvé.
+            Aucune personne accueillie trouvée.
           </div>
         ) : (
           <div className="table-wrap">
@@ -316,10 +311,9 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
                       onChange={handleSelectAll}
                     />
                   </th>
-                  <th>CLIENT</th>
+                  <th>PERSONNE ACCUEILLIE</th>
                   <th>DATE D’ENTRÉE</th>
                   <th>DATE DE SORTIE</th>
-                  <th className="num">TARIF / JOUR</th>
                   <th>STATUT</th>
                   <th className="num">ACTIONS</th>
                 </tr>
@@ -341,7 +335,6 @@ export const GestionClients: React.FC<Props> = ({ idEntreprise }) => {
                       </td>
                       <td>{c.dateEntree || '—'}</td>
                       <td>{c.dateSortie || '—'}</td>
-                      <td className="num">{c.tarifParDefaut.toLocaleString('fr-FR')} XOF</td>
                       <td>
                         <span className={`status ${c.actif ? 'status-active' : 'status-arch'}`}>
                           {c.actif ? 'Actif' : 'Archivé'}

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu } from '../types/facturation';
+import { Client, Facturation, LigneFacturation, Parametre, ImportClientApercu, ResumeFacturation } from '../types/facturation';
 
 // URL officielle du backend Spring Boot
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://facturation-pro-production-1bc7.up.railway.app/api';
@@ -93,6 +93,18 @@ export const FacturationServiceAPI = {
   },
   validerFacture: async (idFacturation: string): Promise<Facturation> => {
     const response = await api.put(`/facturations/${idFacturation}/valider`);
+    return response.data;
+  },
+  listerResumes: async (idEntreprise: string): Promise<ResumeFacturation[]> => {
+    const response = await api.get(`/facturations/entreprise/${idEntreprise}/resumes`);
+    return response.data;
+  },
+  marquerCommePayee: async (idFacturation: string): Promise<Facturation> => {
+    const response = await api.put(`/facturations/${idFacturation}/payer`);
+    return response.data;
+  },
+  annulerPaiement: async (idFacturation: string): Promise<Facturation> => {
+    const response = await api.put(`/facturations/${idFacturation}/annuler-paiement`);
     return response.data;
   },
   reouvrirFacture: async (idFacturation: string): Promise<Facturation> => {

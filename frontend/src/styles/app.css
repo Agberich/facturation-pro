@@ -532,6 +532,11 @@ a {
 }
 
 .status-valid {
+  background: #eff8ff;
+  color: #175cd3;
+}
+
+.status-paid {
   background: #ecfdf3;
   color: #027a48;
 }

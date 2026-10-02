@@ -22,7 +22,8 @@ export const ParametresEntreprise: React.FC<Props> = ({ idEntreprise }) => {
         setP({
           nomEntreprise: '',
           tauxTva: 18,
-          devise: 'XOF',
+          devise: 'EUR',
+          tarifJournalier: 79.91,
           prefixeFacture: 'FAC',
           adresse: '',
           telephone: '',
@@ -163,6 +164,16 @@ export const ParametresEntreprise: React.FC<Props> = ({ idEntreprise }) => {
                     <option value="EUR">Euro (EUR)</option>
                     <option value="USD">Dollar (USD)</option>
                   </select>
+                </div>
+                <div className="field">
+                  <label>Tarif journalier (par jour et par personne accueillie)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={p.tarifJournalier ?? 79.91}
+                    onChange={(e) => setP({ ...p, tarifJournalier: +e.target.value })}
+                  />
                 </div>
                 <div className="field">
                   <label>Préfixe facture</label>

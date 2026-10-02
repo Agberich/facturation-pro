@@ -13,6 +13,7 @@ public class ParametreDTO {
     private String nomEntreprise;
     private BigDecimal tauxTva;
     private String devise;
+    private BigDecimal tarifJournalier;
     private String prefixeFacture;
     private String adresse;
     private String telephone;

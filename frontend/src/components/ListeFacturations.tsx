@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarPlus, Search, ArrowUpRight } from 'lucide-react';
 import { FacturationServiceAPI } from '../services/api';
 import { Facturation, StatutFacturation } from '../types/facturation';
+import { statutFacturation } from '../utils/statut';
 
 interface Props {
   idEntreprise: string;
@@ -9,8 +10,7 @@ interface Props {
 }
 
 const mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-const status = (s: StatutFacturation) =>
-  s === 'VALIDEE' ? ['status-valid', 'Validée'] : s === 'ARCHIVE' ? ['status-arch', 'Archivée'] : ['status-draft', 'Brouillon'];
+const status = (s: StatutFacturation) => statutFacturation(s);
 
 // Fonctions d'initialisation avec persistance
 const getInitialAnnee = () => {
@@ -141,6 +141,7 @@ export const ListeFacturations: React.FC<Props> = ({ idEntreprise, onOuvrirFactu
                   <th>N° FACTURE</th>
                   <th>STATUT</th>
                   <th>VALIDATION</th>
+                  <th>PAIEMENT</th>
                   <th></th>
                 </tr>
               </thead>
@@ -161,6 +162,7 @@ export const ListeFacturations: React.FC<Props> = ({ idEntreprise, onOuvrirFactu
                           <span className={`status ${cls}`}>{label}</span>
                         </td>
                         <td>{f.dateValidation ? new Date(f.dateValidation).toLocaleDateString('fr-FR') : '—'}</td>
+                        <td>{f.datePaiement ? new Date(f.datePaiement).toLocaleDateString('fr-FR') : '—'}</td>
                         <td className="num">
                           <button className="btn" onClick={() => onOuvrirFacturation?.(f.idFacturation)}>
                             Voir <ArrowUpRight size={13} />

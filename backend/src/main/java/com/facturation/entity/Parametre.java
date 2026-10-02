@@ -31,7 +31,11 @@ public class Parametre {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "devise", nullable = false, length = 3, columnDefinition = "devise")
     @Builder.Default
-    private Devise devise = Devise.XOF;
+    private Devise devise = Devise.EUR;
+
+    @Column(name = "tarif_journalier", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal tarifJournalier = new BigDecimal("79.91");
 
     @Column(name = "prefixe_facture", nullable = false, length = 20)
     @Builder.Default
@@ -62,6 +66,9 @@ public class Parametre {
     protected void onUpdate() { 
         updatedAt = OffsetDateTime.now(); 
     }
+
+    /** Tarif par jour et par personne accueillie utilisé tant qu'aucun tarif n'est saisi. */
+    public static final BigDecimal TARIF_JOURNALIER_PAR_DEFAUT = new BigDecimal("79.91");
 
     public enum Devise { XOF, EUR, USD }
 }

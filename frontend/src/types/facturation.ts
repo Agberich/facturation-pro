@@ -5,12 +5,12 @@ export interface Client {
   dateNaissance?: string;
   dateEntree?: string;
   dateSortie?: string;
-  tarifParDefaut: number;
+  tarifParDefaut?: number;
   actif: boolean;
   commentaire?: string;
 }
 
-export type StatutFacturation = 'BROUILLON' | 'VALIDEE' | 'ARCHIVE';
+export type StatutFacturation = 'BROUILLON' | 'VALIDEE' | 'PAYEE' | 'ARCHIVE';
 
 export type StatutLigne = 'ACTIF' | 'NOUVEAU' | 'SORTI' | 'SUSPENDU';
 
@@ -21,7 +21,17 @@ export interface Facturation {
   mois: number;
   statut: StatutFacturation;
   dateValidation?: string;
+  datePaiement?: string;
   commentaire?: string;
+}
+
+/** Totaux d'une facturation (GET /facturations/entreprise/{id}/resumes). */
+export interface ResumeFacturation {
+  idFacturation: string;
+  nbPersonnes: number;
+  totalHt: number;
+  totalTva: number;
+  totalTtc: number;
 }
 
 export interface LigneFacturation {
@@ -41,6 +51,7 @@ export interface Parametre {
   nomEntreprise?: string;
   tauxTva: number;
   devise: 'XOF' | 'EUR' | 'USD';
+  tarifJournalier: number;
   prefixeFacture: string;
   adresse?: string;
   telephone?: string;

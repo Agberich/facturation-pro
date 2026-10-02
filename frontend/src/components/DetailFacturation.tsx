@@ -1,24 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, RefreshCw, CheckCircle2, Unlock, FileDown, FileSpreadsheet, FileText } from 'lucide-react';
-import { FacturationServiceAPI, ExportServiceAPI } from '../services/api';
+import { ArrowLeft, RefreshCw, CheckCircle2, Unlock, FileDown, FileSpreadsheet, FileText, Wallet, RotateCcw } from 'lucide-react';
+import { FacturationServiceAPI, ExportServiceAPI, ParametreServiceAPI } from '../services/api';
 import { Facturation, LigneFacturation, StatutLigne } from '../types/facturation';
+import { statutFacturation } from '../utils/statut';
+import { montant, montantDevise } from '../utils/format';
 
 interface Props {
   idFacturation: string;
+  idEntreprise: string;
   onRetour: () => void;
 }
 
 const mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-const money = (n: number) => n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const lineStatus = (s: StatutLigne) => s === 'NOUVEAU' ? ['status-new', 'Nouveau'] : s === 'SORTI' ? ['status-out', 'Sorti'] : s === 'SUSPENDU' ? ['status-suspended', 'Suspendu'] : ['status-active', 'Actif'];
 
-export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) => {
+export const DetailFacturation: React.FC<Props> = ({ idFacturation, idEntreprise, onRetour }) => {
   const [f, setF] = useState<Facturation | null>(null);
   const [lines, setLines] = useState<LigneFacturation[]>([]);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState('');
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState('');
+  const [devise, setDevise] = useState('EUR');
 
   const load = async () => {
     setLoading(true);
@@ -29,6 +32,11 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
       ]);
       setF(a);
       setLines(b);
+
+      // Devise définie dans les paramètres de l'entreprise
+      ParametreServiceAPI.obtenirParametres(idEntreprise)
+        .then(p => setDevise(p.devise || 'EUR'))
+        .catch(() => undefined);
 
       // Synchronisation du mois et de l'année courante consultés
       if (a) {
@@ -61,6 +69,30 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
       setF(await FacturationServiceAPI.validerFacture(idFacturation));
     } catch (e: any) {
       setError(e.response?.data?.message || 'Erreur de validation.');
+    } finally {
+      setAction('');
+    }
+  };
+
+  const pay = async () => {
+    setAction('pay');
+    try {
+      setF(await FacturationServiceAPI.marquerCommePayee(idFacturation));
+      setError('');
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Erreur lors du paiement.');
+    } finally {
+      setAction('');
+    }
+  };
+
+  const cancelPayment = async () => {
+    setAction('cancelPay');
+    try {
+      setF(await FacturationServiceAPI.annulerPaiement(idFacturation));
+      setError('');
+    } catch (e: any) {
+      setError(e.response?.data?.message || "Erreur lors de l'annulation du paiement.");
     } finally {
       setAction('');
     }
@@ -115,6 +147,9 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
 
   const total = lines.reduce((a, l) => ({ ht: a.ht + l.montantHt, tva: a.tva + l.montantTva, ttc: a.ttc + l.montantTtc, j: a.j + l.nbJours }), { ht: 0, tva: 0, ttc: 0, j: 0 });
   const draft = f.statut === 'BROUILLON';
+  const validee = f.statut === 'VALIDEE';
+  const payee = f.statut === 'PAYEE';
+  const [statutCls, statutLabel] = statutFacturation(f.statut);
 
   return (
     <>
@@ -127,6 +162,14 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
           <div className="eyebrow">Facturation mensuelle</div>
           <h1 className="page-title">{mois[f.mois - 1]} {f.annee}</h1>
           <div className="detail-number">{f.numeroFacture ? `N° ${f.numeroFacture}` : 'Numéro attribué à la validation'}</div>
+          <div style={{ marginTop: 8 }}>
+            <span className={`status ${statutCls}`}>{statutLabel}</span>
+            {payee && f.datePaiement && (
+              <span style={{ marginLeft: 10, fontSize: 12, color: '#667085' }}>
+                le {new Date(f.datePaiement).toLocaleDateString('fr-FR')}
+              </span>
+            )}
+          </div>
         </div>
         <div className="actions">
           {draft && (
@@ -139,9 +182,19 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
               <CheckCircle2 size={14} />{action === 'validate' ? 'Validation…' : 'Valider'}
             </button>
           )}
-          {!draft && (
+          {validee && (
+            <button className="btn btn-success" onClick={pay} disabled={!!action}>
+              <Wallet size={14} />{action === 'pay' ? 'Enregistrement…' : 'Marquer comme payée'}
+            </button>
+          )}
+          {validee && (
             <button className="btn btn-warning" onClick={reopen} disabled={!!action}>
               <Unlock size={14} />{action === 'reopen' ? 'Réouverture…' : 'Réouvrir'}
+            </button>
+          )}
+          {payee && (
+            <button className="btn btn-warning" onClick={cancelPayment} disabled={!!action}>
+              <RotateCcw size={14} />{action === 'cancelPay' ? 'Annulation…' : 'Annuler le paiement'}
             </button>
           )}
         </div>
@@ -151,7 +204,7 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
 
       <div className="grid summary-grid">
         <div className="card summary">
-          <div className="summary-label">Clients facturés</div>
+          <div className="summary-label">Personnes facturées</div>
           <div className="summary-value">{lines.length}</div>
         </div>
         <div className="card summary">
@@ -160,11 +213,11 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
         </div>
         <div className="card summary">
           <div className="summary-label">Total HT</div>
-          <div className="summary-value">{money(total.ht)} XOF</div>
+          <div className="summary-value">{montantDevise(total.ht, devise)}</div>
         </div>
         <div className="card summary summary-highlight">
           <div className="summary-label">Total TTC</div>
-          <div className="summary-value">{money(total.ttc)} XOF</div>
+          <div className="summary-value">{montantDevise(total.ttc, devise)}</div>
         </div>
       </div>
 
@@ -186,7 +239,7 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
         <div className="table-tools">
           <div>
             <div className="section-title">Lignes de facturation</div>
-            <div className="section-sub">Calculées à partir des clients actifs et des règles du mois.</div>
+            <div className="section-sub">Calculées à partir des personnes accueillies actives et des règles du mois.</div>
           </div>
         </div>
 
@@ -201,7 +254,7 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>CLIENT</th>
+                  <th>PERSONNE ACCUEILLIE</th>
                   <th>STATUT</th>
                   <th className="num">JOURS</th>
                   <th className="num">TARIF</th>
@@ -215,13 +268,13 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
                   const [s, label] = lineStatus(l.statut);
                   return (
                     <tr key={l.idLigne}>
-                      <td><strong>{l.client ? l.client.nom + ' ' + l.client.prenom : 'Client inconnu'}</strong></td>
+                      <td><strong>{l.client ? l.client.nom + ' ' + l.client.prenom : 'Personne inconnue'}</strong></td>
                       <td><span className={`status ${s}`}>{label}</span></td>
                       <td className="num">{l.nbJours}</td>
-                      <td className="num">{money(l.tarifApplique)}</td>
-                      <td className="num">{money(l.montantHt)}</td>
-                      <td className="num">{money(l.montantTva)}</td>
-                      <td className="num"><strong>{money(l.montantTtc)}</strong></td>
+                      <td className="num">{montant(l.tarifApplique)}</td>
+                      <td className="num">{montant(l.montantHt)}</td>
+                      <td className="num">{montant(l.montantTva)}</td>
+                      <td className="num"><strong>{montant(l.montantTtc)}</strong></td>
                     </tr>
                   );
                 })}
@@ -229,9 +282,9 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, onRetour }) 
               <tfoot>
                 <tr>
                   <td colSpan={4}><strong>Total</strong></td>
-                  <td className="num"><strong>{money(total.ht)}</strong></td>
-                  <td className="num"><strong>{money(total.tva)}</strong></td>
-                  <td className="num"><strong>{money(total.ttc)}</strong></td>
+                  <td className="num"><strong>{montant(total.ht)}</strong></td>
+                  <td className="num"><strong>{montant(total.tva)}</strong></td>
+                  <td className="num"><strong>{montant(total.ttc)}</strong></td>
                 </tr>
               </tfoot>
             </table>

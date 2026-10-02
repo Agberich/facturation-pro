@@ -32,7 +32,7 @@ type Page = 'dashboard' | 'facturations' | 'clients' | 'import' | 'utilisateurs'
 const nav = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { id: 'facturations', label: 'Facturations', icon: FileText },
-  { id: 'clients', label: 'Clients', icon: Users },
+  { id: 'clients', label: 'Personnes accueillies', icon: Users },
   { id: 'import', label: 'Importation', icon: Upload },
   { id: 'utilisateurs', label: 'Utilisateurs', icon: UserCog },
   { id: 'parametres', label: 'Paramètres', icon: Settings2 },
@@ -281,7 +281,7 @@ export const App: React.FC = () => {
           )}
           {page === 'facturations' &&
             (selected ? (
-              <DetailFacturation idFacturation={selected} onRetour={() => setSelected(null)} />
+              <DetailFacturation idFacturation={selected} idEntreprise={idEntreprise} onRetour={() => setSelected(null)} />
             ) : (
               <ListeFacturations idEntreprise={idEntreprise} onOuvrirFacturation={setSelected} />
             ))}

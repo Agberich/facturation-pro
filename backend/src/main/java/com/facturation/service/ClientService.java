@@ -88,7 +88,6 @@ public class ClientService {
         clientExistant.setDateNaissance(clientModifie.getDateNaissance());
         clientExistant.setDateEntree(clientModifie.getDateEntree());
         clientExistant.setDateSortie(clientModifie.getDateSortie());
-        clientExistant.setTarifParDefaut(clientModifie.getTarifParDefaut());
         clientExistant.setCommentaire(clientModifie.getCommentaire());
 
         // Copie explicite du statut actif/inactif

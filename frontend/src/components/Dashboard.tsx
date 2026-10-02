@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, FileText, Users, Clock3, Plus, Upload } from 'lucide-react';
-import { ClientServiceAPI, FacturationServiceAPI } from '../services/api';
-import { Client, Facturation } from '../types/facturation';
+import { ArrowUpRight, FileText, Users, Wallet, Tag, Plus, Upload, Eye } from 'lucide-react';
+import { ClientServiceAPI, FacturationServiceAPI, ParametreServiceAPI } from '../services/api';
+import { Client, Facturation, Parametre, ResumeFacturation } from '../types/facturation';
+import { statutFacturation } from '../utils/statut';
+import { montant, montantDevise } from '../utils/format';
 
 interface Props {
   idEntreprise: string;
@@ -9,46 +11,44 @@ interface Props {
   onOpenFacturation: (id: string) => void;
 }
 
-const MOIS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+const MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFacturation }) => {
   const [factures, setFactures] = useState<Facturation[]>([]);
+  const [resumes, setResumes] = useState<ResumeFacturation[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [parametre, setParametre] = useState<Parametre | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       FacturationServiceAPI.listerFacturations(idEntreprise),
-      ClientServiceAPI.getListeClients(idEntreprise)
+      FacturationServiceAPI.listerResumes(idEntreprise),
+      ClientServiceAPI.getListeClients(idEntreprise),
+      ParametreServiceAPI.obtenirParametres(idEntreprise).catch(() => null)
     ])
-      .then(([f, c]) => {
+      .then(([f, r, c, p]) => {
         setFactures(f);
+        setResumes(r);
         setClients(c);
+        setParametre(p);
       })
       .finally(() => setLoading(false));
   }, [idEntreprise]);
 
-  const valides = factures.filter(f => f.statut === 'VALIDEE').length;
-  const brouillons = factures.filter(f => f.statut === 'BROUILLON').length;
+  const devise = parametre?.devise || 'EUR';
+  const resumeDe = (id: string) => resumes.find(r => r.idFacturation === id);
 
-  const points = useMemo(() => {
-    const now = new Date().getMonth();
-    return Array.from({ length: 6 }, (_, i) => {
-      const idx = (now - 5 + i + 12) % 12;
-      const count = factures.filter(f => f.mois === idx + 1).length;
-      return { label: MOIS[idx], value: count };
-    });
-  }, [factures]);
-
-  const max = Math.max(1, ...points.map(p => p.value));
-
-  // Ouvre ou pré-sélectionne le mois courant
-  const handleNouvelleFacturation = () => {
-    const currentDate = new Date();
-    localStorage.setItem('facturation_annee', currentDate.getFullYear().toString());
-    localStorage.setItem('facturation_mois', (currentDate.getMonth() + 1).toString());
-    onNavigate('facturations');
-  };
+  // Chiffre d'affaires perçu : uniquement les factures PAYÉES (TTC)
+  const chiffreAffairesPercu = useMemo(
+    () => factures.filter(f => f.statut === 'PAYEE').reduce((somme, f) => somme + (resumeDe(f.idFacturation)?.totalTtc ?? 0), 0),
+    [factures, resumes]
+  );
+  const nbPayees = factures.filter(f => f.statut === 'PAYEE').length;
+  // Factures émises : validées + payées (un brouillon n'est pas encore une facture)
+  const emises = factures.filter(f => f.statut === 'VALIDEE' || f.statut === 'PAYEE');
+  const totalEmis = emises.reduce((somme, f) => somme + (resumeDe(f.idFacturation)?.totalTtc ?? 0), 0);
+  const actifs = clients.filter(c => c.actif).length;
 
   if (loading) return <div className="loading">Chargement du tableau de bord…</div>;
 
@@ -61,11 +61,19 @@ export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFac
           <p className="page-desc">Pilotez vos facturations mensuelles depuis un seul espace.</p>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={handleNouvelleFacturation}>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              const now = new Date();
+              localStorage.setItem('facturation_annee', now.getFullYear().toString());
+              localStorage.setItem('facturation_mois', (now.getMonth() + 1).toString());
+              onNavigate('facturations');
+            }}
+          >
             <Plus size={15} /> Nouvelle facturation
           </button>
           <button className="btn" onClick={() => onNavigate('clients')}>
-            <Users size={15} /> Ajouter un client
+            <Users size={15} /> Ajouter une personne accueillie
           </button>
           <button className="btn" onClick={() => onNavigate('import')}>
             <Upload size={15} /> Importer
@@ -76,121 +84,61 @@ export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFac
       <div className="grid kpi-grid">
         <div className="card kpi">
           <div className="kpi-top">
-            <span className="kpi-label">Clients actifs</span>
+            <span className="kpi-label">Personnes accueillies</span>
             <span className="kpi-icon"><Users size={16} /></span>
           </div>
-          <div className="kpi-value">{clients.filter(c => c.actif).length}</div>
-          <div className="kpi-meta">sur {clients.length} clients enregistrés</div>
+          <div className="kpi-value">{actifs}</div>
+          <div className="kpi-meta">actives sur {clients.length} enregistrée{clients.length !== 1 ? 's' : ''}</div>
         </div>
 
         <div className="card kpi">
           <div className="kpi-top">
-            <span className="kpi-label">Facturations</span>
+            <span className="kpi-label">Chiffre d'affaires perçu</span>
+            <span className="kpi-icon"><Wallet size={16} /></span>
+          </div>
+          <div className="kpi-value">{montantDevise(chiffreAffairesPercu, devise)}</div>
+          <div className="kpi-meta">{nbPayees} facture{nbPayees !== 1 ? 's' : ''} payée{nbPayees !== 1 ? 's' : ''}</div>
+        </div>
+
+        <div className="card kpi">
+          <div className="kpi-top">
+            <span className="kpi-label">Factures émises</span>
             <span className="kpi-icon"><FileText size={16} /></span>
           </div>
-          <div className="kpi-value">{factures.length}</div>
-          <div className="kpi-meta">{brouillons} brouillon{brouillons !== 1 ? 's' : ''}</div>
+          <div className="kpi-value">{emises.length}</div>
+          <div className="kpi-meta">{montantDevise(totalEmis, devise)} au total</div>
         </div>
 
         <div className="card kpi">
           <div className="kpi-top">
-            <span className="kpi-label">Validées</span>
-            <span className="kpi-icon"><ArrowUpRight size={16} /></span>
+            <span className="kpi-label">Tarif journalier actuel</span>
+            <span className="kpi-icon"><Tag size={16} /></span>
           </div>
-          <div className="kpi-value">{valides}</div>
-          <div className="kpi-meta">facturations finalisées</div>
+          <div className="kpi-value">{montantDevise(parametre?.tarifJournalier ?? 79.91, devise)}</div>
+          <div className="kpi-meta">par jour et par personne</div>
         </div>
-
-        <div className="card kpi">
-          <div className="kpi-top">
-            <span className="kpi-label">Période courante</span>
-            <span className="kpi-icon"><Clock3 size={16} /></span>
-          </div>
-          <div className="kpi-value">{MOIS[new Date().getMonth()]}</div>
-          <div className="kpi-meta">{new Date().getFullYear()}</div>
-        </div>
-      </div>
-
-      <div className="grid dashboard-grid">
-        <section className="card section-card">
-          <div className="section-title">Évolution des facturations</div>
-          <div className="section-sub">Nombre de périodes créées sur les 6 derniers mois</div>
-          <div className="chart">
-            <svg viewBox="0 0 720 235" preserveAspectRatio="none">
-              <line className="chart-grid" x1="0" y1="35" x2="720" y2="35" />
-              <line className="chart-grid" x1="0" y1="110" x2="720" y2="110" />
-              <line className="chart-grid" x1="0" y1="185" x2="720" y2="185" />
-              {points.map((p, i) => {
-                const x = 25 + i * 134;
-                return (
-                  <text key={p.label} className="chart-label" x={x} y={215} textAnchor="middle">
-                    {p.label}
-                  </text>
-                );
-              })}
-              <polyline
-                className="chart-line"
-                points={points.map((p, i) => `${25 + i * 134},${190 - (p.value / max) * 145}`).join(' ')}
-              />
-              {points.map((p, i) => {
-                const x = 25 + i * 134;
-                const y = 190 - (p.value / max) * 145;
-                return <circle key={p.label} className="chart-dot" cx={x} cy={y} r="5" />;
-              })}
-            </svg>
-          </div>
-        </section>
-
-        <section className="card section-card">
-          <div className="section-title">Actions rapides</div>
-          <div className="section-sub">Les opérations les plus utilisées</div>
-          <div className="quick-grid">
-            <button className="quick" onClick={handleNouvelleFacturation}>
-              <Plus size={17} className="quick-icon" />
-              <div className="quick-title">Créer une facturation</div>
-              <div className="quick-desc">Ouvrir un nouveau mois</div>
-            </button>
-            <button className="quick" onClick={() => onNavigate('clients')}>
-              <Users size={17} className="quick-icon" />
-              <div className="quick-title">Nouveau client</div>
-              <div className="quick-desc">Ajouter au registre</div>
-            </button>
-            <button className="quick" onClick={() => onNavigate('import')}>
-              <Upload size={17} className="quick-icon" />
-              <div className="quick-title">Importer</div>
-              <div className="quick-desc">Excel, CSV ou ODS</div>
-            </button>
-          </div>
-          <div className="alert">
-            <Clock3 size={18} />
-            <div>
-              <strong>Suivi des règlements</strong>
-              <div style={{ fontSize: 11, marginTop: 3 }}>
-                Le modèle actuel gère la facturation, pas encore les paiements ou retards.
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
 
       <section className="card table-card" style={{ marginTop: 16 }}>
         <div className="table-tools">
           <div>
-            <div className="section-title">Facturations récentes</div>
+            <div className="section-title">Factures mensuelles récentes</div>
             <div className="section-sub">Accès direct aux dernières périodes</div>
           </div>
           <button className="btn" onClick={() => onNavigate('facturations')}>
-            Voir toutes <ArrowUpRight size={14} />
+            Voir tout <ArrowUpRight size={14} />
           </button>
         </div>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
               <tr>
-                <th>PÉRIODE</th>
                 <th>N° FACTURE</th>
+                <th>MOIS / PÉRIODE</th>
+                <th>PERSONNES PRISES EN COMPTE</th>
+                <th className="num">MONTANT TOTAL (TTC)</th>
                 <th>STATUT</th>
-                <th>ACTION</th>
+                <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -198,24 +146,31 @@ export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFac
                 .slice()
                 .sort((a, b) => b.annee - a.annee || b.mois - a.mois)
                 .slice(0, 5)
-                .map(f => (
-                  <tr key={f.idFacturation}>
-                    <td>
-                      <strong>{MOIS[f.mois - 1]} {f.annee}</strong>
-                    </td>
-                    <td>{f.numeroFacture || '—'}</td>
-                    <td>
-                      <span className={`status ${f.statut === 'VALIDEE' ? 'status-valid' : f.statut === 'ARCHIVE' ? 'status-arch' : 'status-draft'}`}>
-                        {f.statut === 'VALIDEE' ? 'Validée' : f.statut === 'ARCHIVE' ? 'Archivée' : 'Brouillon'}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="btn" onClick={() => onOpenFacturation(f.idFacturation)}>
-                        Ouvrir
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                .map(f => {
+                  const [cls, label] = statutFacturation(f.statut);
+                  const r = resumeDe(f.idFacturation);
+                  return (
+                    <tr key={f.idFacturation}>
+                      <td><strong>{f.numeroFacture || '—'}</strong></td>
+                      <td>{MOIS[f.mois - 1]} {f.annee}</td>
+                      <td>{r ? `${r.nbPersonnes} personne${r.nbPersonnes !== 1 ? 's' : ''}` : '—'}</td>
+                      <td className="num">{r ? `${montant(r.totalTtc)} ${devise === 'EUR' ? '€' : devise}` : '—'}</td>
+                      <td><span className={`status ${cls}`}>{label}</span></td>
+                      <td>
+                        <button className="btn" onClick={() => onOpenFacturation(f.idFacturation)} aria-label="Voir la facture">
+                          <Eye size={14} /> Voir
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              {factures.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', color: '#667085', padding: 28 }}>
+                    Aucune facturation pour le moment.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

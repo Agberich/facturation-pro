@@ -27,7 +27,8 @@ public class ParametreService {
                             .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable : " + idEntreprise));
                     return Parametre.builder()
                             .entreprise(entreprise)
-                            .devise(Parametre.Devise.XOF)
+                            .devise(Parametre.Devise.EUR)
+                            .tarifJournalier(Parametre.TARIF_JOURNALIER_PAR_DEFAUT)
                             .tauxTva(BigDecimal.ZERO)
                             .prefixeFacture("FAC-")
                             .build();
@@ -53,6 +54,12 @@ public class ParametreService {
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Devise invalide : " + dto.getDevise());
             }
+        }
+        if (dto.getTarifJournalier() != null) {
+            if (dto.getTarifJournalier().signum() < 0) {
+                throw new IllegalArgumentException("Le tarif journalier ne peut pas être négatif.");
+            }
+            parametre.setTarifJournalier(dto.getTarifJournalier());
         }
         if (dto.getPrefixeFacture() != null && !dto.getPrefixeFacture().isBlank()) {
             parametre.setPrefixeFacture(dto.getPrefixeFacture());
@@ -81,7 +88,7 @@ public class ParametreService {
     private ParametreDTO versDTO(Parametre p) {
         Entreprise entreprise = p.getEntreprise();
         UUID idEnt = (entreprise != null) ? entreprise.getIdEntreprise() : null;
-        String deviseStr = (p.getDevise() != null) ? p.getDevise().name() : "XOF";
+        String deviseStr = (p.getDevise() != null) ? p.getDevise().name() : "EUR";
 
         return ParametreDTO.builder()
                 .idParametre(p.getIdParametre())
@@ -89,6 +96,7 @@ public class ParametreService {
                 .nomEntreprise(entreprise != null ? entreprise.getNom() : null)
                 .tauxTva(p.getTauxTva())
                 .devise(deviseStr)
+                .tarifJournalier(p.getTarifJournalier() != null ? p.getTarifJournalier() : Parametre.TARIF_JOURNALIER_PAR_DEFAUT)
                 .prefixeFacture(p.getPrefixeFacture())
                 .adresse(entreprise != null ? entreprise.getAdresse() : null)
                 .telephone(entreprise != null ? entreprise.getTelephone() : null)

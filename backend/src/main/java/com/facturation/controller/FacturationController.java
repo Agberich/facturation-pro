@@ -1,5 +1,6 @@
 package com.facturation.controller;
 
+import com.facturation.dto.ResumeFacturationDTO;
 import com.facturation.entity.Facturation;
 import com.facturation.entity.LigneFacturation;
 import com.facturation.service.FacturationService;
@@ -21,6 +22,11 @@ public class FacturationController {
     @GetMapping("/entreprise/{idEntreprise}")
     public ResponseEntity<List<Facturation>> listerFacturations(@PathVariable UUID idEntreprise) {
         return ResponseEntity.ok(facturationService.listerFacturations(idEntreprise));
+    }
+
+    @GetMapping("/entreprise/{idEntreprise}/resumes")
+    public ResponseEntity<List<ResumeFacturationDTO>> listerResumes(@PathVariable UUID idEntreprise) {
+        return ResponseEntity.ok(facturationService.listerResumes(idEntreprise));
     }
 
     @GetMapping("/{idFacturation}")
@@ -57,5 +63,15 @@ public class FacturationController {
     @PutMapping("/{idFacturation}/reouvrir")
     public ResponseEntity<Facturation> reouvrirFacture(@PathVariable UUID idFacturation) {
         return ResponseEntity.ok(facturationService.reouvrirFacture(idFacturation));
+    }
+
+    @PutMapping("/{idFacturation}/payer")
+    public ResponseEntity<Facturation> marquerCommePayee(@PathVariable UUID idFacturation) {
+        return ResponseEntity.ok(facturationService.marquerCommePayee(idFacturation));
+    }
+
+    @PutMapping("/{idFacturation}/annuler-paiement")
+    public ResponseEntity<Facturation> annulerPaiement(@PathVariable UUID idFacturation) {
+        return ResponseEntity.ok(facturationService.annulerPaiement(idFacturation));
     }
 }
