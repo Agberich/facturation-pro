@@ -53,12 +53,23 @@ public class ExportService {
     private static final Color ORANGE_BROUILLON = new Color(181, 71, 8);
     private static final Color GRIS_ARCHIVE = new Color(102, 112, 133);
 
-    private static final Set<Integer> COLONNES_CENTREES = Set.of(0, 1, 3, 4, 7, 9, 10, 12);
-    private static final Set<Integer> COLONNES_MONTANTS = Set.of(8, 11, 13, 14);
+    // PDF et Excel : le numéro de facture est déjà dans l'en-tête du document, on ne le répète
+    // pas dans le tableau (14 colonnes). Le CSV n'a pas d'en-tête : il garde la colonne.
+    private static final String[] ENTETES_PDF_EXCEL = {
+            "Index", "Date de facture", "Date d'entree", "Date de sortie",
+            "Nom", "Prenom", "Date de naissance", "Tarif journalier TTC", "Dernier jour du mois",
+            "Nb de jours presents", "Montant total H.T", "Code TVA", "Montant TVA", "Montant TTC"
+    };
+
+    private static final Set<Integer> COLONNES_CENTREES = Set.of(0, 1, 2, 3, 6, 8, 9, 11);
+    private static final Set<Integer> COLONNES_MONTANTS = Set.of(7, 10, 12, 13);
 
     private static final float[] LARGEURS_COLONNES = {
-            3f, 6f, 8f, 6f, 6f, 7f, 7f, 6f, 6f, 6f, 4f, 7f, 4f, 7f, 7f
+            3f, 6f, 6f, 6f, 7f, 7f, 6f, 8f, 6f, 4f, 8f, 4f, 8f, 8f
     };
+
+    // Espace insécable : empêche « 7 192,80 € » de se couper sur deux lignes dans une cellule.
+    private static final char ESPACE_INSECABLE = '\u00A0';
 
     private final FacturationRepository facturationRepository;
     private final LigneFacturationRepository ligneFacturationRepository;
@@ -78,6 +89,7 @@ public class ExportService {
         Parametre parametre = obtenirParametre(facture);
         String codeTva = formatCodeTva(parametre);
         String devise = parametre != null && parametre.getDevise() != null ? parametre.getDevise().name() : "";
+        String symbole = symboleDevise(parametre);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4.rotate(), 24, 24, 24, 60);
@@ -158,11 +170,11 @@ public class ExportService {
         document.add(new Paragraph(" "));
 
         // --- Tableau principal ---
-        PdfPTable table = new PdfPTable(ENTETES_EXPORT.length);
+        PdfPTable table = new PdfPTable(ENTETES_PDF_EXCEL.length);
         table.setWidthPercentage(100);
         table.setWidths(LARGEURS_COLONNES);
 
-        for (String entete : ENTETES_EXPORT) {
+        for (String entete : ENTETES_PDF_EXCEL) {
             addCellToHeader(table, entete, headerFont);
         }
 
@@ -173,7 +185,7 @@ public class ExportService {
         int index = 1;
         for (LigneFacturation ligne : lignes) {
             boolean ligneAlternee = index % 2 == 0;
-            String[] valeurs = construireLignePdf(index++, facture, ligne, codeTva);
+            String[] valeurs = construireLignePdf(index++, ligne, codeTva, symbole);
             for (int i = 0; i < valeurs.length; i++) {
                 PdfPCell cell = new PdfPCell(new Phrase(valeurs[i], bodyFont));
                 cell.setPadding(3);
@@ -197,16 +209,16 @@ public class ExportService {
 
         // Totaux
         PdfPCell celluleTotalLabel = new PdfPCell(new Phrase("TOTAL", totalFont));
-        celluleTotalLabel.setColspan(11);
+        celluleTotalLabel.setColspan(10);
         celluleTotalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
         celluleTotalLabel.setPadding(4);
         celluleTotalLabel.setBackgroundColor(BLEU_TOTAL);
         table.addCell(celluleTotalLabel);
 
-        table.addCell(celluleTotal(formatMontantAffichage(totalHt), totalFont));
+        table.addCell(celluleTotal(formatMontantAvecDevise(totalHt, symbole), totalFont));
         table.addCell(celluleTotal("", totalFont));
-        table.addCell(celluleTotal(formatMontantAffichage(totalTva), totalFont));
-        table.addCell(celluleTotal(formatMontantAffichage(totalTtc), totalFont));
+        table.addCell(celluleTotal(formatMontantAvecDevise(totalTva, symbole), totalFont));
+        table.addCell(celluleTotal(formatMontantAvecDevise(totalTtc, symbole), totalFont));
 
         document.add(table);
         document.close();
@@ -280,6 +292,7 @@ public class ExportService {
         Parametre parametre = obtenirParametre(facture);
         String codeTva = formatCodeTva(parametre);
         String devise = parametre != null && parametre.getDevise() != null ? parametre.getDevise().name() : "";
+        String symbole = symboleDevise(parametre);
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Facture");
@@ -297,7 +310,8 @@ public class ExportService {
 
             CellStyle styleMontant = workbook.createCellStyle();
             styleMontant.setAlignment(HorizontalAlignment.RIGHT);
-            styleMontant.setDataFormat(workbook.createDataFormat().getFormat("#,##0.00"));
+            // Cellules numériques (les SUM restent valides) avec le symbole de la devise des paramètres
+            styleMontant.setDataFormat(workbook.createDataFormat().getFormat("#,##0.00 \"" + symbole + "\""));
 
             CellStyle styleMontantTotal = workbook.createCellStyle();
             styleMontantTotal.cloneStyleFrom(styleMontant);
@@ -328,9 +342,9 @@ public class ExportService {
             r++;
 
             org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(r++);
-            for (int i = 0; i < ENTETES_EXPORT.length; i++) {
+            for (int i = 0; i < ENTETES_PDF_EXCEL.length; i++) {
                 org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
-                cell.setCellValue(ENTETES_EXPORT[i]);
+                cell.setCellValue(ENTETES_PDF_EXCEL[i]);
                 cell.setCellStyle(styleEnTete);
             }
 
@@ -342,19 +356,18 @@ public class ExportService {
 
                 setCelluleTexte(row, 0, String.valueOf(index++), styleCentre);
                 setCelluleTexte(row, 1, formatDate(ligne.getDateFacture()), styleCentre);
-                row.createCell(2).setCellValue(valeurOuVide(numeroAffiche));
-                setCelluleTexte(row, 3, formatDate(ligne.getDateEntreeEffective()), styleCentre);
-                setCelluleTexte(row, 4, formatDate(ligne.getDateSortieEffective()), styleCentre);
-                row.createCell(5).setCellValue(client != null ? valeurOuVide(client.getNom()) : "");
-                row.createCell(6).setCellValue(client != null ? valeurOuVide(client.getPrenom()) : "");
-                setCelluleTexte(row, 7, client != null ? formatDate(client.getDateNaissance()) : "", styleCentre);
-                setCelluleNumerique(row, 8, ligne.getTarifApplique(), styleMontant);
-                setCelluleTexte(row, 9, formatDate(ligne.getDernierJourMois()), styleCentre);
-                setCelluleTexte(row, 10, ligne.getNbJours() != null ? String.valueOf(ligne.getNbJours()) : "0", styleCentre);
-                setCelluleNumerique(row, 11, ligne.getMontantHt(), styleMontant);
-                setCelluleTexte(row, 12, codeTva, styleCentre);
-                setCelluleNumerique(row, 13, ligne.getMontantTva(), styleMontant);
-                setCelluleNumerique(row, 14, ligne.getMontantTtc(), styleMontant);
+                setCelluleTexte(row, 2, formatDate(ligne.getDateEntreeEffective()), styleCentre);
+                setCelluleTexte(row, 3, formatDate(ligne.getDateSortieEffective()), styleCentre);
+                row.createCell(4).setCellValue(client != null ? valeurOuVide(client.getNom()) : "");
+                row.createCell(5).setCellValue(client != null ? valeurOuVide(client.getPrenom()) : "");
+                setCelluleTexte(row, 6, client != null ? formatDate(client.getDateNaissance()) : "", styleCentre);
+                setCelluleNumerique(row, 7, ligne.getTarifApplique(), styleMontant);
+                setCelluleTexte(row, 8, formatDate(ligne.getDernierJourMois()), styleCentre);
+                setCelluleTexte(row, 9, ligne.getNbJours() != null ? String.valueOf(ligne.getNbJours()) : "0", styleCentre);
+                setCelluleNumerique(row, 10, ligne.getMontantHt(), styleMontant);
+                setCelluleTexte(row, 11, codeTva, styleCentre);
+                setCelluleNumerique(row, 12, ligne.getMontantTva(), styleMontant);
+                setCelluleNumerique(row, 13, ligne.getMontantTtc(), styleMontant);
             }
             int ligneFinDonnees = r - 1;
 
@@ -365,24 +378,24 @@ public class ExportService {
                 celluleLabelTotal.setCellValue("TOTAL");
                 celluleLabelTotal.setCellStyle(styleTitre);
 
-                String plageHt = colonneExcel(11) + (ligneDebutDonnees + 1) + ":" + colonneExcel(11) + (ligneFinDonnees + 1);
-                String plageTva = colonneExcel(13) + (ligneDebutDonnees + 1) + ":" + colonneExcel(13) + (ligneFinDonnees + 1);
-                String plageTtc = colonneExcel(14) + (ligneDebutDonnees + 1) + ":" + colonneExcel(14) + (ligneFinDonnees + 1);
+                String plageHt = colonneExcel(10) + (ligneDebutDonnees + 1) + ":" + colonneExcel(10) + (ligneFinDonnees + 1);
+                String plageTva = colonneExcel(12) + (ligneDebutDonnees + 1) + ":" + colonneExcel(12) + (ligneFinDonnees + 1);
+                String plageTtc = colonneExcel(13) + (ligneDebutDonnees + 1) + ":" + colonneExcel(13) + (ligneFinDonnees + 1);
 
-                org.apache.poi.ss.usermodel.Cell celluleTotalHt = ligneTotal.createCell(11);
+                org.apache.poi.ss.usermodel.Cell celluleTotalHt = ligneTotal.createCell(10);
                 celluleTotalHt.setCellFormula("SUM(" + plageHt + ")");
                 celluleTotalHt.setCellStyle(styleMontantTotal);
 
-                org.apache.poi.ss.usermodel.Cell celluleTotalTva = ligneTotal.createCell(13);
+                org.apache.poi.ss.usermodel.Cell celluleTotalTva = ligneTotal.createCell(12);
                 celluleTotalTva.setCellFormula("SUM(" + plageTva + ")");
                 celluleTotalTva.setCellStyle(styleMontantTotal);
 
-                org.apache.poi.ss.usermodel.Cell celluleTotalTtc = ligneTotal.createCell(14);
+                org.apache.poi.ss.usermodel.Cell celluleTotalTtc = ligneTotal.createCell(13);
                 celluleTotalTtc.setCellFormula("SUM(" + plageTtc + ")");
                 celluleTotalTtc.setCellStyle(styleMontantTotal);
             }
 
-            for (int i = 0; i < ENTETES_EXPORT.length; i++) {
+            for (int i = 0; i < ENTETES_PDF_EXCEL.length; i++) {
                 sheet.setColumnWidth(i, 15 * 256);
             }
 
@@ -414,14 +427,23 @@ public class ExportService {
                 .findByFacturationIdFacturationOrderByOrdreAffichageAsc(idFacturation);
         Parametre parametre = obtenirParametre(facture);
         String codeTva = formatCodeTva(parametre);
+        String codeDevise = parametre != null && parametre.getDevise() != null ? parametre.getDevise().name() : "EUR";
 
         BigDecimal totalHt = BigDecimal.ZERO;
         BigDecimal totalTva = BigDecimal.ZERO;
         BigDecimal totalTtc = BigDecimal.ZERO;
 
+        // Les montants restent des nombres (le CSV doit rester exploitable) ; la devise est
+        // indiquée dans le titre des colonnes concernées.
+        String[] entetesCsv = ENTETES_EXPORT.clone();
+        entetesCsv[8] = "Tarif journalier TTC (" + codeDevise + ")";
+        entetesCsv[11] = "Montant total H.T (" + codeDevise + ")";
+        entetesCsv[13] = "Montant TVA (" + codeDevise + ")";
+        entetesCsv[14] = "Montant TTC (" + codeDevise + ")";
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
-            writer.writeNext(ENTETES_EXPORT);
+            writer.writeNext(entetesCsv);
 
             int index = 1;
             for (LigneFacturation ligne : lignes) {
@@ -471,24 +493,23 @@ public class ExportService {
         };
     }
 
-    private String[] construireLignePdf(int index, Facturation facture, LigneFacturation ligne, String codeTva) {
+    private String[] construireLignePdf(int index, LigneFacturation ligne, String codeTva, String symbole) {
         Client client = ligne.getClient();
         return new String[]{
                 String.valueOf(index),
                 formatDate(ligne.getDateFacture()),
-                valeurOuVide(facture.getNumeroFacture()),
                 formatDate(ligne.getDateEntreeEffective()),
                 formatDate(ligne.getDateSortieEffective()),
                 client != null ? valeurOuVide(client.getNom()) : "",
                 client != null ? valeurOuVide(client.getPrenom()) : "",
                 client != null ? formatDate(client.getDateNaissance()) : "",
-                formatMontantAffichage(ligne.getTarifApplique()),
+                formatMontantAvecDevise(ligne.getTarifApplique(), symbole),
                 formatDate(ligne.getDernierJourMois()),
                 ligne.getNbJours() != null ? String.valueOf(ligne.getNbJours()) : "0",
-                formatMontantAffichage(ligne.getMontantHt()),
+                formatMontantAvecDevise(ligne.getMontantHt(), symbole),
                 codeTva,
-                formatMontantAffichage(ligne.getMontantTva()),
-                formatMontantAffichage(ligne.getMontantTtc())
+                formatMontantAvecDevise(ligne.getMontantTva(), symbole),
+                formatMontantAvecDevise(ligne.getMontantTtc(), symbole)
         };
     }
 
@@ -500,8 +521,8 @@ public class ExportService {
                 valeurOuVide(facture.getNumeroFacture()),
                 formatDate(ligne.getDateEntreeEffective()),
                 formatDate(ligne.getDateSortieEffective()),
-                client != null ? valeurOuVide(client.getNom()) : "",
-                client != null ? valeurOuVide(client.getPrenom()) : "",
+                client != null ? neutraliserFormule(client.getNom()) : "",
+                client != null ? neutraliserFormule(client.getPrenom()) : "",
                 client != null ? formatDate(client.getDateNaissance()) : "",
                 formatMontantCsv(ligne.getTarifApplique()),
                 formatDate(ligne.getDernierJourMois()),
@@ -511,6 +532,22 @@ public class ExportService {
                 formatMontantCsv(ligne.getMontantTva()),
                 formatMontantCsv(ligne.getMontantTtc())
         };
+    }
+
+    /**
+     * Un texte qui commence par = + - @ (ou tabulation / retour chariot) est interprété comme une
+     * formule quand le CSV est ouvert dans Excel. On le neutralise avec une apostrophe en tête.
+     * (Dans le fichier Excel .xlsx, ces textes sont stockés comme du texte et ne sont pas évalués.)
+     */
+    private String neutraliserFormule(String valeur) {
+        if (valeur == null || valeur.isEmpty()) {
+            return "";
+        }
+        char c = valeur.charAt(0);
+        if (c == '=' || c == '+' || c == '-' || c == '@' || c == '\t' || c == '\r') {
+            return "'" + valeur;
+        }
+        return valeur;
     }
 
     private String formatDate(LocalDate date) {
@@ -526,6 +563,23 @@ public class ExportService {
         symbols.setGroupingSeparator(' ');
         DecimalFormat df = new DecimalFormat("#,##0.00", symbols);
         return df.format(valeurSure(montant).setScale(2, RoundingMode.HALF_UP));
+    }
+
+    /** Montant suivi du symbole de la devise des paramètres, ex. « 7 192,80 € ». */
+    private String formatMontantAvecDevise(BigDecimal montant, String symbole) {
+        return formatMontantAffichage(montant).replace(' ', ESPACE_INSECABLE) + ESPACE_INSECABLE + symbole;
+    }
+
+    /** Symbole de la devise choisie dans les paramètres (EUR par défaut). */
+    private String symboleDevise(Parametre parametre) {
+        if (parametre == null || parametre.getDevise() == null) {
+            return "€";
+        }
+        return switch (parametre.getDevise()) {
+            case EUR -> "€";
+            case USD -> "$";
+            case XOF -> "F CFA";
+        };
     }
 
     private String formatMontantCsv(BigDecimal montant) {

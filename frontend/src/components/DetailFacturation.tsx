@@ -3,7 +3,7 @@ import { ArrowLeft, RefreshCw, CheckCircle2, Unlock, FileDown, FileSpreadsheet, 
 import { FacturationServiceAPI, ExportServiceAPI, ParametreServiceAPI } from '../services/api';
 import { Facturation, LigneFacturation, StatutLigne } from '../types/facturation';
 import { statutFacturation } from '../utils/statut';
-import { montant, montantDevise } from '../utils/format';
+import { montantDevise } from '../utils/format';
 
 interface Props {
   idFacturation: string;
@@ -257,7 +257,7 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, idEntreprise
                   <th>PERSONNE ACCUEILLIE</th>
                   <th>STATUT</th>
                   <th className="num">JOURS</th>
-                  <th className="num">TARIF</th>
+                  <th className="num">TARIF TTC / JOUR</th>
                   <th className="num">HT</th>
                   <th className="num">TVA</th>
                   <th className="num">TTC</th>
@@ -271,10 +271,10 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, idEntreprise
                       <td><strong>{l.client ? l.client.nom + ' ' + l.client.prenom : 'Personne inconnue'}</strong></td>
                       <td><span className={`status ${s}`}>{label}</span></td>
                       <td className="num">{l.nbJours}</td>
-                      <td className="num">{montant(l.tarifApplique)}</td>
-                      <td className="num">{montant(l.montantHt)}</td>
-                      <td className="num">{montant(l.montantTva)}</td>
-                      <td className="num"><strong>{montant(l.montantTtc)}</strong></td>
+                      <td className="num">{montantDevise(l.tarifApplique, devise)}</td>
+                      <td className="num">{montantDevise(l.montantHt, devise)}</td>
+                      <td className="num">{montantDevise(l.montantTva, devise)}</td>
+                      <td className="num"><strong>{montantDevise(l.montantTtc, devise)}</strong></td>
                     </tr>
                   );
                 })}
@@ -282,9 +282,9 @@ export const DetailFacturation: React.FC<Props> = ({ idFacturation, idEntreprise
               <tfoot>
                 <tr>
                   <td colSpan={4}><strong>Total</strong></td>
-                  <td className="num"><strong>{montant(total.ht)}</strong></td>
-                  <td className="num"><strong>{montant(total.tva)}</strong></td>
-                  <td className="num"><strong>{montant(total.ttc)}</strong></td>
+                  <td className="num"><strong>{montantDevise(total.ht, devise)}</strong></td>
+                  <td className="num"><strong>{montantDevise(total.tva, devise)}</strong></td>
+                  <td className="num"><strong>{montantDevise(total.ttc, devise)}</strong></td>
                 </tr>
               </tfoot>
             </table>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { verifierMotDePasse, AIDE_MOT_DE_PASSE } from '../utils/motDePasse';
 import { Lock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { AuthServiceAPI } from '../services/authService';
 
@@ -22,8 +23,9 @@ export const ChangerMotDePasse: React.FC<Props> = ({ onSuccess }) => {
       return;
     }
 
-    if (nouveauMotDePasse.length < 6) {
-      setErreur('Le nouveau mot de passe doit contenir au moins 6 caractères.');
+    const problemeMdp = verifierMotDePasse(nouveauMotDePasse);
+    if (problemeMdp) {
+      setErreur(problemeMdp);
       return;
     }
 
@@ -86,6 +88,7 @@ export const ChangerMotDePasse: React.FC<Props> = ({ onSuccess }) => {
               required
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
+            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>{AIDE_MOT_DE_PASSE}</div>
           </div>
 
           <div>

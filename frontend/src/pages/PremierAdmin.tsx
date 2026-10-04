@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { verifierMotDePasse, AIDE_MOT_DE_PASSE } from '../utils/motDePasse';
 import { Building2, Lock, Mail, Phone, User, ShieldCheck } from 'lucide-react';
 import { AuthServiceAPI, LoginResponse } from '../services/authService';
 
@@ -25,6 +26,12 @@ export const PremierAdmin: React.FC<Props> = ({ onSuccess }) => {
 
     if (formData.motDePasse !== formData.confirmMotDePasse) {
       setError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    const problemeMdp = verifierMotDePasse(formData.motDePasse);
+    if (problemeMdp) {
+      setError(problemeMdp);
       return;
     }
 
@@ -155,6 +162,7 @@ export const PremierAdmin: React.FC<Props> = ({ onSuccess }) => {
                     style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>{AIDE_MOT_DE_PASSE}</div>
               </div>
 
               <div>

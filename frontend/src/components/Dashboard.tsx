@@ -3,7 +3,7 @@ import { ArrowUpRight, FileText, Users, Wallet, Tag, Plus, Upload, Eye } from 'l
 import { ClientServiceAPI, FacturationServiceAPI, ParametreServiceAPI } from '../services/api';
 import { Client, Facturation, Parametre, ResumeFacturation } from '../types/facturation';
 import { statutFacturation } from '../utils/statut';
-import { montant, montantDevise } from '../utils/format';
+import { montantDevise } from '../utils/format';
 
 interface Props {
   idEntreprise: string;
@@ -115,7 +115,7 @@ export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFac
             <span className="kpi-icon"><Tag size={16} /></span>
           </div>
           <div className="kpi-value">{montantDevise(parametre?.tarifJournalier ?? 79.91, devise)}</div>
-          <div className="kpi-meta">par jour et par personne</div>
+          <div className="kpi-meta">TTC, par jour et par personne</div>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFac
                       <td><strong>{f.numeroFacture || '—'}</strong></td>
                       <td>{MOIS[f.mois - 1]} {f.annee}</td>
                       <td>{r ? `${r.nbPersonnes} personne${r.nbPersonnes !== 1 ? 's' : ''}` : '—'}</td>
-                      <td className="num">{r ? `${montant(r.totalTtc)} ${devise === 'EUR' ? '€' : devise}` : '—'}</td>
+                      <td className="num">{r ? montantDevise(r.totalTtc, devise) : '—'}</td>
                       <td><span className={`status ${cls}`}>{label}</span></td>
                       <td>
                         <button className="btn" onClick={() => onOpenFacturation(f.idFacturation)} aria-label="Voir la facture">

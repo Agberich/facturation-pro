@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { verifierMotDePasse, AIDE_MOT_DE_PASSE } from '../../utils/motDePasse';
 import {
   UtilisateurRequest,
   UtilisateurResponse,
@@ -51,6 +52,15 @@ export const UtilisateurForm: React.FC<UtilisateurFormProps> = ({
 
     setIsSubmitting(true);
     setError(null);
+
+    if (motDePasse) {
+      const problemeMdp = verifierMotDePasse(motDePasse);
+      if (problemeMdp) {
+        setError(problemeMdp);
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const payload: UtilisateurRequest = {
@@ -138,6 +148,7 @@ export const UtilisateurForm: React.FC<UtilisateurFormProps> = ({
               onChange={(e) => setMotDePasse(e.target.value)}
               placeholder="********"
             />
+            <small style={{ color: '#64748b' }}>{AIDE_MOT_DE_PASSE}</small>
           </div>
 
           <div className="form-group">

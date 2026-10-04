@@ -23,6 +23,17 @@ public class AuthService {
     private final ParametreRepository parametreRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttemptService;
+
+    /** Hash BCrypt factice : sert à garder le même temps de réponse quand l'e-mail n'existe pas. */
+    private volatile String hashFactice;
+
+    private String hashFactice() {
+        if (hashFactice == null) {
+            hashFactice = passwordEncoder.encode("mot-de-passe-factice-0");
+        }
+        return hashFactice;
+    }
 
     public PremierAdminExisteResponseDTO verifierPremierAdminExiste() {
         boolean existe = utilisateurRepository.existsByDeletedAtIsNull();
@@ -36,6 +47,8 @@ public class AuthService {
         if (utilisateurRepository.existsByDeletedAtIsNull()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un administrateur existe déjà dans le système.");
         }
+
+        PolitiqueMotDePasse.valider(request.getMotDePasse());
 
         // 1. Création de l'entreprise
         Entreprise entreprise = new Entreprise();
@@ -65,11 +78,23 @@ public class AuthService {
     }
 
     public LoginResponseDTO login(LoginRequestDTO request) {
-        Utilisateur utilisateur = utilisateurRepository
-                .findByEmailAndDeletedAtIsNull(request.getEmail())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects"));
+        String email = request.getEmail();
+        String motDePasse = request.getMotDePasse() != null ? request.getMotDePasse() : "";
 
-        if (!passwordEncoder.matches(request.getMotDePasse(), utilisateur.getMotDePasseHash())) {
+        // Trop d'échecs récents pour cet e-mail : on refuse avant tout calcul
+        loginAttemptService.verifierNonBloque(email);
+
+        Utilisateur utilisateur = utilisateurRepository.findByEmailAndDeletedAtIsNull(email).orElse(null);
+
+        if (utilisateur == null) {
+            // Même durée de calcul qu'avec un vrai compte : on ne révèle pas si l'e-mail existe
+            passwordEncoder.matches(motDePasse, hashFactice());
+            loginAttemptService.enregistrerEchec(email);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects");
+        }
+
+        if (!passwordEncoder.matches(motDePasse, utilisateur.getMotDePasseHash())) {
+            loginAttemptService.enregistrerEchec(email);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects");
         }
 
@@ -77,6 +102,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte désactivé");
         }
 
+        loginAttemptService.enregistrerSucces(email);
         return genererReponseLogin(utilisateur);
     }
 
@@ -88,6 +114,11 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getAncienMotDePasse(), utilisateur.getMotDePasseHash())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "L'ancien mot de passe est incorrect");
+        }
+
+        PolitiqueMotDePasse.valider(request.getNouveauMotDePasse());
+        if (request.getNouveauMotDePasse().equals(request.getAncienMotDePasse())) {
+            throw new IllegalArgumentException("Le nouveau mot de passe doit être différent de l'ancien.");
         }
 
         utilisateur.setMotDePasseHash(passwordEncoder.encode(request.getNouveauMotDePasse()));

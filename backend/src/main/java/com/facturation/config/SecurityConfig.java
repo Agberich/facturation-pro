@@ -41,6 +41,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
+            // Changer son mot de passe suppose d'être connecté (quel que soit le rôle)
+            .requestMatchers(HttpMethod.POST, "/api/auth/changer-mot-de-passe").authenticated()
             .requestMatchers("/api/auth/**").permitAll()
             // Gestion des utilisateurs : reservee a ADMIN, y compris la simple consultation.
             .requestMatchers("/api/utilisateurs", "/api/utilisateurs/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")

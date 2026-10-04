@@ -26,7 +26,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}   # false en production (les requêtes SQL contiennent des données)
     properties:
       hibernate:
         format_sql: true

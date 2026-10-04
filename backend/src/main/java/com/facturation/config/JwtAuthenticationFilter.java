@@ -1,5 +1,7 @@
 package com.facturation.config;
 
+import com.facturation.entity.Utilisateur;
+import com.facturation.repository.UtilisateurRepository;
 import com.facturation.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -23,6 +25,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UtilisateurRepository utilisateurRepository;
 
     @Override
     protected void doFilterInternal(
@@ -42,23 +45,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String email = jwtService.extractUsername(jwt);
-            String role = jwtService.extractRole(jwt);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                List<SimpleGrantedAuthority> authorities = Collections.emptyList();
-                if (role != null) {
-                    String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
-                    authorities = List.of(new SimpleGrantedAuthority(formattedRole));
+                // Le jeton seul ne suffit pas : l'utilisateur doit toujours exister et être actif,
+                // et son rôle est celui d'aujourd'hui (pas celui d'il y a 12 h).
+                Utilisateur utilisateur = utilisateurRepository.findByEmailAndDeletedAtIsNull(email).orElse(null);
+
+                if (utilisateur != null && Boolean.TRUE.equals(utilisateur.getActif())) {
+                    List<SimpleGrantedAuthority> authorities = Collections.emptyList();
+                    if (utilisateur.getRole() != null) {
+                        authorities = List.of(new SimpleGrantedAuthority("ROLE_" + utilisateur.getRole().name()));
+                    }
+
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            authorities
+                    );
+
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
-
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        authorities
-                );
-
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
             // En cas de jeton invalide, l'authentification n'est pas définie

@@ -166,7 +166,7 @@ export const ParametresEntreprise: React.FC<Props> = ({ idEntreprise }) => {
                   </select>
                 </div>
                 <div className="field">
-                  <label>Tarif journalier (par jour et par personne accueillie)</label>
+                  <label>Tarif journalier TTC (TVA incluse, par jour et par personne accueillie)</label>
                   <input
                     type="number"
                     min="0"

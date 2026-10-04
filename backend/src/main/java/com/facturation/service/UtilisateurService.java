@@ -45,6 +45,8 @@ public class UtilisateurService {
             throw new IllegalArgumentException("Un utilisateur existe déjà avec cet email : " + request.getEmail());
         }
 
+        PolitiqueMotDePasse.valider(request.getMotDePasse());
+
         Entreprise entreprise = entrepriseRepository.findById(idEntreprise)
                 .orElseThrow(() -> new EntityNotFoundException("Entreprise non trouvée avec l'ID : " + idEntreprise));
 
@@ -71,10 +73,21 @@ public class UtilisateurService {
             throw new IllegalArgumentException("Un autre utilisateur utilise déjà cet email : " + request.getEmail());
         }
 
+        // On ne peut pas retirer le rôle admin ni désactiver le dernier administrateur en modifiant son profil
+        boolean perdLeRoleAdmin = Utilisateur.RoleUtilisateur.ADMIN.equals(utilisateur.getRole())
+                && request.getRole() != null
+                && !Utilisateur.RoleUtilisateur.ADMIN.equals(request.getRole());
+        boolean seraDesactive = Boolean.TRUE.equals(utilisateur.getActif())
+                && Boolean.FALSE.equals(request.getActif());
+        if (perdLeRoleAdmin || seraDesactive) {
+            verifierDernierAdministrateur(utilisateur);
+        }
+
         utilisateur.setNom(request.getNom());
         utilisateur.setEmail(request.getEmail());
 
         if (request.getMotDePasse() != null && !request.getMotDePasse().isBlank()) {
+            PolitiqueMotDePasse.valider(request.getMotDePasse());
             utilisateur.setMotDePasseHash(passwordEncoder.encode(request.getMotDePasse()));
             utilisateur.setDoitChangerMotDePasse(true); // Redemande un changement si le mot de passe est réinitialisé
         }
