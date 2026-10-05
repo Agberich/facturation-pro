@@ -208,10 +208,10 @@ export const App: React.FC = () => {
     <div className="app-shell">
       <aside className={`sidebar ${mobile ? 'open' : ''}`}>
         <div className="brand">
-          <div className="brand-mark">F</div>
+          <div className="brand-mark">A</div>
           <div>
-            <div className="brand-title">Facturation Pro</div>
-            <div className="brand-sub">Gestion mensuelle</div>
+            <div className="brand-title">Aconta Pro</div>
+            <div className="brand-sub">Ma comptabilité</div>
           </div>
         </div>
 

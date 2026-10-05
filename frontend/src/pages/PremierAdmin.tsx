@@ -63,7 +63,7 @@ export const PremierAdmin: React.FC<Props> = ({ onSuccess }) => {
         
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <ShieldCheck size={48} color="#2563eb" style={{ marginBottom: '8px' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', margin: '0 0 6px 0' }}>Initialisation de Facturation Pro</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', margin: '0 0 6px 0' }}>Initialisation d’Aconta Pro</h1>
           <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>Configurez votre entreprise et créez le premier administrateur.</p>
         </div>
 
@@ -85,7 +85,7 @@ export const PremierAdmin: React.FC<Props> = ({ onSuccess }) => {
                   type="text"
                   required
                   value={formData.nomEntreprise}
-                  placeholder="Ex : Facturation Pro SARL"
+                  placeholder="Ex : Ma Société SARL"
                   onChange={(e) => setFormData({ ...formData, nomEntreprise: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
                 />

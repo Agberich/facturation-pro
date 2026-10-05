@@ -56,6 +56,33 @@ export interface Parametre {
   adresse?: string;
   telephone?: string;
   email?: string;
+  /** Image PNG/JPEG en base64 (adresse « data: »). */
+  logoUrl?: string;
+  signatureUrl?: string;
+  dispositif?: string;
+  typePrestation?: string;
+  categorieEtablissement?: string;
+  discipline?: string;
+  modeFonctionnement?: string;
+  publicAccueilli?: string;
+  centreProfit?: string;
+  financeurNom?: string;
+  financeurService?: string;
+  financeurAdresse?: string;
+  financeurEmail?: string;
+  financeurSiret?: string;
+  numeroEngagement?: string;
+  fournisseurSiret?: string;
+  directionTerritoriale?: string;
+  iban?: string;
+  mentionReglement?: string;
+  contactUt?: string;
+  interlocuteur?: string;
+  fonctionInterlocuteur?: string;
+  contactDispositif?: string;
+  capacite?: number;
+  /** Mois (1-12) où commence le trimestre 1 de la prestation (4 = avril). */
+  premierMoisPrestation?: number;
 }
 /** Ligne brute d'aperçu retournée par POST /api/import/clients/apercu, avant
  * conversion en Client. Toutes les valeurs sont des chaînes non typées côté

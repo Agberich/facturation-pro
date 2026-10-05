@@ -114,7 +114,7 @@ export const Dashboard: React.FC<Props> = ({ idEntreprise, onNavigate, onOpenFac
             <span className="kpi-label">Tarif journalier actuel</span>
             <span className="kpi-icon"><Tag size={16} /></span>
           </div>
-          <div className="kpi-value">{montantDevise(parametre?.tarifJournalier ?? 79.91, devise)}</div>
+          <div className="kpi-value">{montantDevise(parametre?.tarifJournalier ?? 79.92, devise)}</div>
           <div className="kpi-meta">TTC, par jour et par personne</div>
         </div>
       </div>

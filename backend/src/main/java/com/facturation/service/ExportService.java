@@ -119,6 +119,11 @@ public class ExportService {
 
         PdfPCell celluleEntreprise = new PdfPCell();
         celluleEntreprise.setBorder(Rectangle.NO_BORDER);
+        com.lowagie.text.Image logo = chargerImage(parametre != null ? parametre.getLogo() : null);
+        if (logo != null) {
+            logo.scaleToFit(130, 55);
+            celluleEntreprise.addElement(logo);
+        }
         if (entreprise != null) {
             celluleEntreprise.addElement(new Paragraph(nomAffiche, entrepriseFont));
             if (entreprise.getAdresse() != null && !entreprise.getAdresse().isBlank()) {
@@ -131,6 +136,14 @@ public class ExportService {
                 celluleEntreprise.addElement(new Paragraph(entreprise.getEmail(), infoFont));
             }
         }
+        if (parametre != null) {
+            if (estRenseigne(parametre.getFournisseurSiret())) {
+                celluleEntreprise.addElement(new Paragraph("SIRET : " + parametre.getFournisseurSiret(), infoFont));
+            }
+            if (estRenseigne(parametre.getDirectionTerritoriale())) {
+                celluleEntreprise.addElement(new Paragraph(parametre.getDirectionTerritoriale(), infoFont));
+            }
+        }
         enTete.addCell(celluleEntreprise);
 
         PdfPCell celluleFacture = new PdfPCell();
@@ -141,9 +154,20 @@ public class ExportService {
         titre.setAlignment(Element.ALIGN_RIGHT);
         celluleFacture.addElement(titre);
         
-        Paragraph periode = new Paragraph("Période : " + facture.getMois() + "/" + facture.getAnnee(), infoFont);
+        String textePeriode = (facture.getDateDebutPeriode() != null && facture.getDateFinPeriode() != null)
+                ? "Période de facturation : du " + formatDate(facture.getDateDebutPeriode())
+                        + " au " + formatDate(facture.getDateFinPeriode())
+                : "Période : " + facture.getMois() + "/" + facture.getAnnee();
+        Paragraph periode = new Paragraph(textePeriode, infoFont);
         periode.setAlignment(Element.ALIGN_RIGHT);
         celluleFacture.addElement(periode);
+
+        if (parametre != null && parametre.getTarifJournalier() != null) {
+            Paragraph prixJournee = new Paragraph(
+                    "Prix de journée TTC : " + formatMontantAvecDevise(parametre.getTarifJournalier(), symbole), infoFont);
+            prixJournee.setAlignment(Element.ALIGN_RIGHT);
+            celluleFacture.addElement(prixJournee);
+        }
         
         Paragraph statut = new Paragraph();
         statut.add(new Chunk("Statut : ", infoFont));
@@ -167,6 +191,61 @@ public class ExportService {
         enTete.addCell(celluleFacture);
 
         document.add(enTete);
+        document.add(new Paragraph(" "));
+
+        // --- Blocs « Prestation » et « Facturé à » (modèle FACTURATION_2026.xlsx) ---
+        com.lowagie.text.Font blocTitre = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BLEU);
+        com.lowagie.text.Font blocTexte = FontFactory.getFont(FontFactory.HELVETICA, 8, new Color(60, 60, 60));
+        com.lowagie.text.Font blocGras = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BLEU_FONCE);
+
+        List<String> lignesPrestation = new java.util.ArrayList<>();
+        if (parametre != null) {
+            ajouterSiRenseigne(lignesPrestation, "Dispositif", parametre.getDispositif());
+            ajouterSiRenseigne(lignesPrestation, "Type de prestation", parametre.getTypePrestation());
+            ajouterSiRenseigne(lignesPrestation, "Catégorie d'établissement", parametre.getCategorieEtablissement());
+            ajouterSiRenseigne(lignesPrestation, "Discipline", parametre.getDiscipline());
+            ajouterSiRenseigne(lignesPrestation, "Mode de fonctionnement", parametre.getModeFonctionnement());
+            ajouterSiRenseigne(lignesPrestation, "Public", parametre.getPublicAccueilli());
+            if (parametre.getCapacite() != null) {
+                lignesPrestation.add("Capacité : " + parametre.getCapacite());
+            }
+            ajouterSiRenseigne(lignesPrestation, "Centre de profit", parametre.getCentreProfit());
+        }
+        lignesPrestation.add("Exercice : " + facture.getAnnee());
+        if (facture.getMois() != null && facture.getMois() >= 1 && facture.getMois() <= 12) {
+            String nomMois = java.time.Month.of(facture.getMois())
+                    .getDisplayName(java.time.format.TextStyle.FULL, Locale.FRENCH);
+            lignesPrestation.add("Période d'exécution : " + nomMois + " " + facture.getAnnee());
+            // Trimestre de la prestation : le trimestre 1 commence au « premier mois de la prestation »
+            // (avril par défaut) -> avr-juin = T1, juil-sept = T2, oct-déc = T3, janv-mars = T4.
+            int premierMois = (parametre != null && parametre.getPremierMoisPrestation() != null)
+                    ? parametre.getPremierMoisPrestation() : 4;
+            int trimestre = ((facture.getMois() - premierMois + 12) % 12) / 3 + 1;
+            lignesPrestation.add("Trimestre de la prestation : Trimestre " + trimestre);
+        }
+
+        List<String> lignesFinanceur = new java.util.ArrayList<>();
+        if (parametre != null) {
+            if (estRenseigne(parametre.getFinanceurService())) {
+                lignesFinanceur.add(parametre.getFinanceurService());
+            }
+            if (estRenseigne(parametre.getFinanceurAdresse())) {
+                lignesFinanceur.add(parametre.getFinanceurAdresse());
+            }
+            ajouterSiRenseigne(lignesFinanceur, "E-mail", parametre.getFinanceurEmail());
+            ajouterSiRenseigne(lignesFinanceur, "SIRET", parametre.getFinanceurSiret());
+            ajouterSiRenseigne(lignesFinanceur, "N° d'engagement", parametre.getNumeroEngagement());
+        }
+        boolean aUnFinanceur = parametre != null && estRenseigne(parametre.getFinanceurNom());
+
+        PdfPTable blocs = new PdfPTable((aUnFinanceur || !lignesFinanceur.isEmpty()) ? 2 : 1);
+        blocs.setWidthPercentage(100);
+        blocs.addCell(celluleBloc("PRESTATION", null, lignesPrestation, blocTitre, blocGras, blocTexte));
+        if (aUnFinanceur || !lignesFinanceur.isEmpty()) {
+            blocs.addCell(celluleBloc("FACTURÉ À",
+                    aUnFinanceur ? parametre.getFinanceurNom() : null, lignesFinanceur, blocTitre, blocGras, blocTexte));
+        }
+        document.add(blocs);
         document.add(new Paragraph(" "));
 
         // --- Tableau principal ---
@@ -221,9 +300,109 @@ public class ExportService {
         table.addCell(celluleTotal(formatMontantAvecDevise(totalTtc, symbole), totalFont));
 
         document.add(table);
+
+        // --- Pied de facture : contacts, références bancaires, signature ---
+        List<String> lignesContacts = new java.util.ArrayList<>();
+        List<String> lignesBanque = new java.util.ArrayList<>();
+        com.lowagie.text.Image signature = null;
+        if (parametre != null) {
+            ajouterSiRenseigne(lignesContacts, "UT", parametre.getContactUt());
+            if (estRenseigne(parametre.getInterlocuteur())) {
+                String fonction = estRenseigne(parametre.getFonctionInterlocuteur())
+                        ? " (" + parametre.getFonctionInterlocuteur() + ")" : "";
+                lignesContacts.add("Interlocuteur : " + parametre.getInterlocuteur() + fonction);
+            }
+            ajouterSiRenseigne(lignesContacts, "Contact", parametre.getContactDispositif());
+            if (estRenseigne(parametre.getIban())) {
+                if (estRenseigne(parametre.getMentionReglement())) {
+                    lignesBanque.add(parametre.getMentionReglement());
+                }
+                lignesBanque.add("IBAN : " + formaterIban(parametre.getIban()));
+            }
+            signature = chargerImage(parametre.getSignatureUrl());
+        }
+
+        int nbColonnesPied = (lignesContacts.isEmpty() ? 0 : 1) + (lignesBanque.isEmpty() ? 0 : 1) + (signature != null ? 1 : 0);
+        if (nbColonnesPied > 0) {
+            document.add(new Paragraph(" "));
+            PdfPTable pied = new PdfPTable(nbColonnesPied);
+            pied.setWidthPercentage(100);
+            pied.setKeepTogether(true);
+            if (!lignesContacts.isEmpty()) {
+                pied.addCell(celluleBloc("CONTACTS", null, lignesContacts, blocTitre, blocGras, blocTexte));
+            }
+            if (!lignesBanque.isEmpty()) {
+                pied.addCell(celluleBloc("RÉFÉRENCES BANCAIRES", null, lignesBanque, blocTitre, blocGras, blocTexte));
+            }
+            if (signature != null) {
+                signature.scaleToFit(150, 65);
+                PdfPCell celluleSignature = new PdfPCell();
+                celluleSignature.setBorderColor(BLEU_TOTAL);
+                celluleSignature.setPadding(6);
+                celluleSignature.addElement(new Paragraph("SIGNATURE", blocTitre));
+                celluleSignature.addElement(signature);
+                pied.addCell(celluleSignature);
+            }
+            document.add(pied);
+        }
+
         document.close();
 
         return out.toByteArray();
+    }
+
+    private boolean estRenseigne(String valeur) {
+        return valeur != null && !valeur.isBlank();
+    }
+
+    private void ajouterSiRenseigne(List<String> lignes, String libelle, String valeur) {
+        if (estRenseigne(valeur)) {
+            lignes.add(libelle + " : " + valeur);
+        }
+    }
+
+    /** Bloc encadré : titre bleu, éventuelle première ligne en gras (nom), puis les lignes de texte. */
+    private PdfPCell celluleBloc(String titre, String ligneGras, List<String> lignes,
+                                 com.lowagie.text.Font fontTitre, com.lowagie.text.Font fontGras,
+                                 com.lowagie.text.Font fontTexte) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBorderColor(BLEU_TOTAL);
+        cell.setBackgroundColor(BLEU_TRES_CLAIR);
+        cell.setPadding(6);
+        cell.addElement(new Paragraph(titre, fontTitre));
+        if (estRenseigne(ligneGras)) {
+            cell.addElement(new Paragraph(ligneGras, fontGras));
+        }
+        for (String ligne : lignes) {
+            cell.addElement(new Paragraph(ligne, fontTexte));
+        }
+        return cell;
+    }
+
+    /** IBAN affiché par groupes de 4 caractères, ex. « FR76 3000 6000 ». */
+    private String formaterIban(String iban) {
+        String compact = iban.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        return compact.replaceAll("(.{4})(?!$)", "$1 ");
+    }
+
+    /**
+     * Décode le logo ou la signature enregistrés dans les paramètres (adresse « data: » base64).
+     * Une image absente ou illisible ne doit jamais empêcher d'imprimer la facture : on renvoie null.
+     */
+    private com.lowagie.text.Image chargerImage(String adresseData) {
+        if (adresseData == null || adresseData.isBlank()) {
+            return null;
+        }
+        try {
+            int virgule = adresseData.indexOf(',');
+            if (!adresseData.startsWith("data:image/") || virgule < 0) {
+                return null;
+            }
+            byte[] octets = java.util.Base64.getDecoder().decode(adresseData.substring(virgule + 1));
+            return com.lowagie.text.Image.getInstance(octets);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private PdfPCell celluleTotal(String texte, com.lowagie.text.Font font) {
@@ -398,6 +577,14 @@ public class ExportService {
             for (int i = 0; i < ENTETES_PDF_EXCEL.length; i++) {
                 sheet.setColumnWidth(i, 15 * 256);
             }
+
+            // Les totaux sont des formules SUM. POI ne les calcule pas : sans valeur enregistrée dans
+            // le fichier, la ligne TOTAL paraît vide dans l'aperçu, en mode protégé (fichier
+            // téléchargé), sur téléphone ou dans un navigateur. On calcule donc les formules
+            // maintenant (la valeur est écrite dans le fichier) et on demande aussi à Excel de
+            // recalculer à l'ouverture. Les formules restent vivantes si on modifie des lignes.
+            workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+            workbook.setForceFormulaRecalculation(true);
 
             workbook.write(out);
             return out.toByteArray();

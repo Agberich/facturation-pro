@@ -166,8 +166,20 @@ public class FacturationService {
             recalculerLigne(ligne.getIdLigne());
         }
 
+        // HT et TVA se calculent sur le TOTAL de la facture (règle du modèle) : on répartit les
+        // centimes entre les lignes pour que leur somme soit exactement égale au total.
+        repartirMontants(idFacturation);
+
         log.info("Lignes générées/recalculées pour la facturation ID {}", idFacturation);
         return listerLignes(idFacturation);
+    }
+
+    private void repartirMontants(UUID idFacturation) {
+        entityManager.flush();
+        entityManager.createNativeQuery("SELECT app_facturation.repartir_montants_facturation(:idFacturation)")
+                .setParameter("idFacturation", idFacturation)
+                .getSingleResult();
+        entityManager.clear();
     }
 
     private void recalculerLigne(UUID idLigne) {
@@ -220,9 +232,10 @@ public class FacturationService {
         // facture, pas une nouvelle — seul son contenu a été corrigé.
         if (facture.getNumeroFacture() == null) {
             String nouveauNumero = (String) entityManager.createNativeQuery(
-                    "SELECT app_facturation.generer_numero_facture(:idEntreprise, :annee)")
+                    "SELECT app_facturation.generer_numero_facture_mensuel(:idEntreprise, :annee, :mois)")
                     .setParameter("idEntreprise", facture.getEntreprise().getIdEntreprise())
                     .setParameter("annee", facture.getAnnee())
+                    .setParameter("mois", facture.getMois())
                     .getSingleResult();
             facture.setNumeroFacture(nouveauNumero);
             log.info("Facture validée avec le nouveau numéro {} (ID: {})", nouveauNumero, idFacturation);
@@ -313,7 +326,7 @@ public class FacturationService {
                 .collect(Collectors.toList());
     }
 
-    /** Tarif journalier unique des paramètres (79,91 si aucun paramètre n'existe encore). */
+    /** Tarif journalier unique des paramètres (79,92 si aucun paramètre n'existe encore). */
     private BigDecimal tarifJournalier(UUID idEntreprise) {
         return parametreRepository.findByEntrepriseIdEntreprise(idEntreprise)
                 .map(Parametre::getTarifJournalier)
