@@ -63,7 +63,7 @@ export const PremierAdmin: React.FC<Props> = ({ onSuccess }) => {
         
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <ShieldCheck size={48} color="#2563eb" style={{ marginBottom: '8px' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', margin: '0 0 6px 0' }}>Initialisation d’Aconta Pro</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', margin: '0 0 6px 0' }}>Initialisation d’ACOMPTA PRO</h1>
           <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>Configurez votre entreprise et créez le premier administrateur.</p>
         </div>
 

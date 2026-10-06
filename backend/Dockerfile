@@ -17,4 +17,8 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
+# Utilisateur sans privilèges : en cas de faille, l'attaquant n'est pas root dans le conteneur
+RUN addgroup -S app && adduser -S app -G app
+USER app
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

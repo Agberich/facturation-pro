@@ -33,7 +33,7 @@ export const Login: React.FC<Props> = ({ onSuccess }) => {
         <div className="auth-header">
           <LogIn size={40} className="auth-icon" />
           <h2>Connexion</h2>
-          <p>Accédez à votre espace Aconta Pro – Ma comptabilité</p>
+          <p>Accédez à votre espace ACOMPTA PRO – Ma comptabilité</p>
         </div>
 
         {error && <div className="auth-error">{error}</div>}

@@ -210,7 +210,7 @@ export const App: React.FC = () => {
         <div className="brand">
           <div className="brand-mark">A</div>
           <div>
-            <div className="brand-title">Aconta Pro</div>
+            <div className="brand-title">ACOMPTA PRO</div>
             <div className="brand-sub">Ma comptabilité</div>
           </div>
         </div>
